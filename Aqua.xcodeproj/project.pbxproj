@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		21130990300EA7B900BE6F00 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 21130975300EA7B700BE6F00 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2113097C300EA7B700BE6F00;
+			remoteInfo = Aqua;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		2113097D300EA7B700BE6F00 /* Aqua.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aqua.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		21130992300EA7B900BE6F00 /* AquaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AquaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = Aqua;
 			sourceTree = "<group>";
 		};
+		21130993300EA7B900BE6F00 /* AquaTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AquaTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		2113097A300EA7B700BE6F00 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		21130995300EA7B900BE6F00 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				2113097F300EA7B700BE6F00 /* Aqua */,
+				21130993300EA7B900BE6F00 /* AquaTests */,
 				2113097E300EA7B700BE6F00 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				2113097D300EA7B700BE6F00 /* Aqua.app */,
+				21130992300EA7B900BE6F00 /* AquaTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = 2113097D300EA7B700BE6F00 /* Aqua.app */;
 			productType = "com.apple.product-type.application";
 		};
+		21130997300EA7B900BE6F00 /* AquaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2113099A300EA7B900BE6F00 /* Build configuration list for PBXNativeTarget "AquaTests" */;
+			buildPhases = (
+				21130994300EA7B900BE6F00 /* Sources */,
+				21130995300EA7B900BE6F00 /* Frameworks */,
+				21130996300EA7B900BE6F00 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				21130991300EA7B900BE6F00 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				21130993300EA7B900BE6F00 /* AquaTests */,
+			);
+			name = AquaTests;
+			packageProductDependencies = (
+			);
+			productName = AquaTests;
+			productReference = 21130992300EA7B900BE6F00 /* AquaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					2113097C300EA7B700BE6F00 = {
 						CreatedOnToolsVersion = 26.0;
+					};
+					21130997300EA7B900BE6F00 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 2113097C300EA7B700BE6F00;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				2113097C300EA7B700BE6F00 /* Aqua */,
+				21130997300EA7B900BE6F00 /* AquaTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		2113097B300EA7B700BE6F00 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		21130996300EA7B900BE6F00 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		21130994300EA7B900BE6F00 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		21130991300EA7B900BE6F00 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2113097C300EA7B700BE6F00 /* Aqua */;
+			targetProxy = 21130990300EA7B900BE6F00 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		21130986300EA7B800BE6F00 /* Debug */ = {
@@ -249,6 +324,7 @@
 		21130989300EA7B800BE6F00 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_DISPLAY_NAME = Aqua;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
@@ -256,6 +332,7 @@
 				DEVELOPMENT_TEAM = 98M6CK2V4A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -281,6 +358,7 @@
 		2113098A300EA7B800BE6F00 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_DISPLAY_NAME = Aqua;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
@@ -288,6 +366,7 @@
 				DEVELOPMENT_TEAM = 98M6CK2V4A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -310,6 +389,46 @@
 			};
 			name = Release;
 		};
+		21130998300EA7B900BE6F00 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 98M6CK2V4A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = rafaeltoneto.AquaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Aqua.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Aqua";
+			};
+			name = Debug;
+		};
+		21130999300EA7B900BE6F00 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 98M6CK2V4A;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = rafaeltoneto.AquaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Aqua.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Aqua";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -327,6 +446,15 @@
 			buildConfigurations = (
 				21130989300EA7B800BE6F00 /* Debug */,
 				2113098A300EA7B800BE6F00 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2113099A300EA7B900BE6F00 /* Build configuration list for PBXNativeTarget "AquaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				21130998300EA7B900BE6F00 /* Debug */,
+				21130999300EA7B900BE6F00 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
