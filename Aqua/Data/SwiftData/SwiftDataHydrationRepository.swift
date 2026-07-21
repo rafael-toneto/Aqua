@@ -40,8 +40,14 @@ final class SwiftDataHydrationRepository: HydrationRepository {
             return []
         }
 
+        return try await entries(from: startOfDay, to: startOfNextDay)
+    }
+
+    func entries(from startDate: Date, to endDate: Date) async throws -> [HydrationEntry] {
+        guard startDate < endDate else { return [] }
+
         let predicate = #Predicate<SwiftDataHydrationEntry> { entry in
-            entry.date >= startOfDay && entry.date < startOfNextDay
+            entry.date >= startDate && entry.date < endDate
         }
         let descriptor = FetchDescriptor(
             predicate: predicate,
