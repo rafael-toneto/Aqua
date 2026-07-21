@@ -1,7 +1,13 @@
 import SwiftUI
 
 struct SettingsView: View {
+    private enum FocusedField: Hashable {
+        case dailyGoal
+        case quickAddAmount(Int)
+    }
+
     @StateObject private var viewModel: SettingsViewModel
+    @FocusState private var focusedField: FocusedField?
 
     init(
         goalService: any HydrationGoalServiceProtocol,
@@ -22,6 +28,7 @@ struct SettingsView: View {
                     HStack {
                         TextField("Daily goal", text: $viewModel.goalText)
                             .keyboardType(.numberPad)
+                            .focused($focusedField, equals: .dailyGoal)
                             .accessibilityLabel("Daily water goal in milliliters")
 
                         Text("ml")
@@ -29,6 +36,7 @@ struct SettingsView: View {
                     }
 
                     Button("Save Goal") {
+                        focusedField = nil
                         viewModel.save()
                     }
                     .disabled(!viewModel.canSave)
@@ -54,9 +62,10 @@ struct SettingsView: View {
                                 text: $viewModel.quickAddAmountTexts[index]
                             )
                             .keyboardType(.numberPad)
+                            .focused($focusedField, equals: .quickAddAmount(index))
                             .multilineTextAlignment(.trailing)
                             .frame(maxWidth: 120)
-                            .accessibilityLabel("Quick-add slot \(index + 1) in milliliters")
+                            .accessibilityLabel("Quick-add slotem  \(index + 1) in milliliters")
 
                             Text("ml")
                                 .foregroundStyle(.secondary)
@@ -64,6 +73,7 @@ struct SettingsView: View {
                     }
 
                     Button("Save Quick Add Amounts") {
+                        focusedField = nil
                         viewModel.saveQuickAddAmounts()
                     }
                     .disabled(!viewModel.canSaveQuickAddAmounts)
@@ -96,6 +106,10 @@ struct SettingsView: View {
                     Text("These features are informational only and are not active in this version.")
                 }
             }
+            .onTapGesture {
+                focusedField = nil
+            }
+            .scrollDismissesKeyboard(.immediately)
             .navigationTitle("Settings")
             .onAppear { viewModel.load() }
             .sensoryFeedback(.success, trigger: viewModel.feedbackTrigger)
