@@ -1,13 +1,22 @@
 import SwiftUI
 
 struct SettingsView: View {
-    private enum FocusedField: Hashable {
+    private enum EditableValue: Identifiable {
         case dailyGoal
         case quickAddAmount(Int)
+
+        var id: String {
+            switch self {
+            case .dailyGoal:
+                "daily-goal"
+            case .quickAddAmount(let index):
+                "quick-add-\(index)"
+            }
+        }
     }
 
     @StateObject private var viewModel: SettingsViewModel
-    @FocusState private var focusedField: FocusedField?
+    @State private var editableValue: EditableValue?
 
     init(
         goalService: any HydrationGoalServiceProtocol,
@@ -23,23 +32,16 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            List {
                 Section {
-                    HStack {
-                        TextField("Daily goal", text: $viewModel.goalText)
-                            .keyboardType(.numberPad)
-                            .focused($focusedField, equals: .dailyGoal)
-                            .accessibilityLabel("Daily water goal in milliliters")
-
-                        Text("ml")
-                            .foregroundStyle(.secondary)
+                    editableSettingRow(
+                        title: "Daily goal",
+                        value: WaterAmountFormatter.string(from: viewModel.savedGoalInMilliliters),
+                        systemImage: "target",
+                        accessibilityHint: "Sets the amount of water you aim to drink each day"
+                    ) {
+                        editableValue = .dailyGoal
                     }
-
-                    Button("Save Goal") {
-                        focusedField = nil
-                        viewModel.save()
-                    }
-                    .disabled(!viewModel.canSave)
 
                     if let errorMessage = viewModel.errorMessage {
                         AquaErrorMessage(message: errorMessage)
@@ -51,32 +53,18 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    ForEach(viewModel.quickAddAmountTexts.indices, id: \.self) { index in
-                        HStack {
-                            Text("Slot \(index + 1)")
-
-                            Spacer()
-
-                            TextField(
-                                "Amount",
-                                text: $viewModel.quickAddAmountTexts[index]
-                            )
-                            .keyboardType(.numberPad)
-                            .focused($focusedField, equals: .quickAddAmount(index))
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 120)
-                            .accessibilityLabel("Quick-add slotem  \(index + 1) in milliliters")
-
-                            Text("ml")
-                                .foregroundStyle(.secondary)
+                    ForEach(viewModel.savedQuickAddAmountsInMilliliters.indices, id: \.self) { index in
+                        editableSettingRow(
+                            title: "Slot \(index + 1)",
+                            value: WaterAmountFormatter.string(
+                                from: viewModel.savedQuickAddAmountsInMilliliters[index]
+                            ),
+                            systemImage: "drop.fill",
+                            accessibilityHint: "Sets the amount added by quick-add slot \(index + 1)"
+                        ) {
+                            editableValue = .quickAddAmount(index)
                         }
                     }
-
-                    Button("Save Quick Add Amounts") {
-                        focusedField = nil
-                        viewModel.saveQuickAddAmounts()
-                    }
-                    .disabled(!viewModel.canSaveQuickAddAmounts)
 
                     if let errorMessage = viewModel.quickAddErrorMessage {
                         AquaErrorMessage(message: errorMessage)
@@ -92,8 +80,8 @@ struct SettingsView: View {
                         "\(AppBrand.displayName) supports healthy hydration habits but does not provide medical advice.",
                         systemImage: "heart.text.square"
                     )
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 }
 
                 Section {
@@ -106,13 +94,92 @@ struct SettingsView: View {
                     Text("These features are informational only and are not active in this version.")
                 }
             }
-            .onTapGesture {
-                focusedField = nil
-            }
-            .scrollDismissesKeyboard(.immediately)
+            .listStyle(.insetGrouped)
             .navigationTitle("Settings")
             .onAppear { viewModel.load() }
+            .sheet(item: $editableValue) { value in
+                editor(for: value)
+            }
             .sensoryFeedback(.success, trigger: viewModel.feedbackTrigger)
+        }
+    }
+
+    private func editableSettingRow(
+        title: String,
+        value: String,
+        systemImage: String,
+        accessibilityHint: String,
+        edit: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: AquaSpacing.medium) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.blue)
+                .frame(width: 28)
+                .accessibilityHidden(true)
+
+            Text(title)
+
+            Spacer(minLength: AquaSpacing.small)
+
+            Text(value)
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .contentTransition(.numericText())
+
+            Button(action: edit) {
+                Image(systemName: "pencil")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(width: 32, height: 32)
+                    .background(.blue.opacity(0.12), in: Circle())
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.blue)
+            .accessibilityLabel("Edit \(title)")
+            .accessibilityValue(value)
+            .accessibilityHint(accessibilityHint)
+        }
+        .frame(minHeight: 44)
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func editor(for value: EditableValue) -> some View {
+        switch value {
+        case .dailyGoal:
+            AmountEditorSheet(
+                title: "Edit Daily Goal",
+                fieldLabel: "Daily water goal",
+                initialValue: String(Int(viewModel.savedGoalInMilliliters.rounded())),
+                systemImage: "target",
+                footer: "Enter a whole number greater than zero.",
+                accessibilityLabel: "Daily water goal in milliliters"
+            ) { newValue in
+                viewModel.goalText = newValue
+                viewModel.save()
+                return viewModel.errorMessage
+            }
+
+        case .quickAddAmount(let index):
+            AmountEditorSheet(
+                title: "Edit Slot \(index + 1)",
+                fieldLabel: "Quick-add amount",
+                initialValue: String(
+                    Int(viewModel.savedQuickAddAmountsInMilliliters[index].rounded())
+                ),
+                systemImage: "drop.fill",
+                footer: "Enter a whole number greater than zero.",
+                accessibilityLabel: "Quick-add slot \(index + 1) in milliliters"
+            ) { newValue in
+                viewModel.quickAddAmountTexts = viewModel.savedQuickAddAmountsInMilliliters.map {
+                    String(Int($0.rounded()))
+                }
+                viewModel.quickAddAmountTexts[index] = newValue
+                viewModel.saveQuickAddAmounts()
+                return viewModel.quickAddErrorMessage
+            }
         }
     }
 
@@ -120,5 +187,111 @@ struct SettingsView: View {
         Label(title, systemImage: systemImage)
             .foregroundStyle(.secondary)
             .accessibilityLabel("\(title), coming later")
+    }
+}
+
+private struct AmountEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var isAmountFieldFocused: Bool
+
+    @State private var amountText: String
+    @State private var errorMessage: String?
+
+    private let title: String
+    private let fieldLabel: String
+    private let initialValue: String
+    private let systemImage: String
+    private let footer: String
+    private let accessibilityLabel: String
+    private let onSave: (String) -> String?
+
+    init(
+        title: String,
+        fieldLabel: String,
+        initialValue: String,
+        systemImage: String,
+        footer: String,
+        accessibilityLabel: String,
+        onSave: @escaping (String) -> String?
+    ) {
+        self.title = title
+        self.fieldLabel = fieldLabel
+        self.initialValue = initialValue
+        self.systemImage = systemImage
+        self.footer = footer
+        self.accessibilityLabel = accessibilityLabel
+        self.onSave = onSave
+        _amountText = State(initialValue: initialValue)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack(spacing: AquaSpacing.medium) {
+                        Image(systemName: systemImage)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.blue)
+                            .frame(width: 28)
+                            .accessibilityHidden(true)
+
+                        TextField(fieldLabel, text: $amountText)
+                            .keyboardType(.numberPad)
+                            .focused($isAmountFieldFocused)
+                            .font(.system(.title2, design: .rounded, weight: .semibold))
+                            .accessibilityLabel(accessibilityLabel)
+
+                        Text("ml")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, AquaSpacing.extraSmall)
+                } footer: {
+                    Text(footer)
+                }
+
+                if let errorMessage {
+                    Section {
+                        AquaErrorMessage(message: errorMessage)
+                    }
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                        .fontWeight(.semibold)
+                        .disabled(!canSave)
+                }
+            }
+            .onAppear { isAmountFieldFocused = true }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var parsedAmount: Int? {
+        let trimmedText = amountText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let amount = Int(trimmedText), amount > 0 else { return nil }
+        return amount
+    }
+
+    private var canSave: Bool {
+        guard let parsedAmount else { return false }
+        return parsedAmount != Int(initialValue)
+    }
+
+    private func save() {
+        guard let parsedAmount else { return }
+        errorMessage = onSave(String(parsedAmount))
+
+        if errorMessage == nil {
+            dismiss()
+        }
     }
 }
