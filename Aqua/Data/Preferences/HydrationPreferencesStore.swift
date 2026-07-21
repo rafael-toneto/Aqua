@@ -3,12 +3,14 @@ import Foundation
 @MainActor
 protocol HydrationPreferencesStoring: AnyObject {
     var dailyGoalInMilliliters: Double { get set }
+    var quickAddAmountsInMilliliters: [Double] { get set }
 }
 
 @MainActor
 final class HydrationPreferencesStore: HydrationPreferencesStoring {
     private enum Key {
         static let dailyGoalInMilliliters = "hydration.dailyGoalInMilliliters"
+        static let quickAddAmountsInMilliliters = "hydration.quickAddAmountsInMilliliters"
     }
 
     private let userDefaults: UserDefaults
@@ -30,6 +32,25 @@ final class HydrationPreferencesStore: HydrationPreferencesStoring {
         }
         set {
             userDefaults.set(newValue, forKey: Key.dailyGoalInMilliliters)
+        }
+    }
+
+    var quickAddAmountsInMilliliters: [Double] {
+        get {
+            guard let storedValues = userDefaults.array(forKey: Key.quickAddAmountsInMilliliters) else {
+                return HydrationDefaults.quickAddAmountsInMilliliters
+            }
+
+            let amounts = storedValues.compactMap { ($0 as? NSNumber)?.doubleValue }
+            guard amounts.count == HydrationDefaults.quickAddAmountsInMilliliters.count,
+                  amounts.allSatisfy({ $0.isFinite && $0 > 0 }) else {
+                return HydrationDefaults.quickAddAmountsInMilliliters
+            }
+
+            return amounts
+        }
+        set {
+            userDefaults.set(newValue, forKey: Key.quickAddAmountsInMilliliters)
         }
     }
 }

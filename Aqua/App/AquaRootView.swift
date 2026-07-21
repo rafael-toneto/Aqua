@@ -3,6 +3,7 @@ import SwiftUI
 struct AquaRootView: View {
     let trackingService: any HydrationTrackingServiceProtocol
     let goalService: any HydrationGoalServiceProtocol
+    let quickAddAmountsService: any QuickAddAmountsServiceProtocol
     let dateProvider: any DateProviding
 
     var body: some View {
@@ -10,6 +11,7 @@ struct AquaRootView: View {
             TodayView(
                 trackingService: trackingService,
                 goalService: goalService,
+                quickAddAmountsService: quickAddAmountsService,
                 dateProvider: dateProvider
             )
             .tabItem {
@@ -25,7 +27,10 @@ struct AquaRootView: View {
                 Label("History", systemImage: "chart.bar.fill")
             }
 
-            SettingsView(goalService: goalService)
+            SettingsView(
+                goalService: goalService,
+                quickAddAmountsService: quickAddAmountsService
+            )
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")
                 }

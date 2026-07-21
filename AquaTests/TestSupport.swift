@@ -37,13 +37,16 @@ struct FixedDateProvider: DateProviding {
 @MainActor
 final class InMemoryHydrationPreferencesStore: HydrationPreferencesStoring {
     var dailyGoalInMilliliters: Double
+    var quickAddAmountsInMilliliters: [Double]
 
     init() {
         dailyGoalInMilliliters = HydrationDefaults.dailyGoalInMilliliters
+        quickAddAmountsInMilliliters = HydrationDefaults.quickAddAmountsInMilliliters
     }
 
     init(dailyGoalInMilliliters: Double) {
         self.dailyGoalInMilliliters = dailyGoalInMilliliters
+        quickAddAmountsInMilliliters = HydrationDefaults.quickAddAmountsInMilliliters
     }
 }
 

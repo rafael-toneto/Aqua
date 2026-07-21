@@ -3,8 +3,16 @@ import SwiftUI
 struct SettingsView: View {
     @StateObject private var viewModel: SettingsViewModel
 
-    init(goalService: any HydrationGoalServiceProtocol) {
-        _viewModel = StateObject(wrappedValue: SettingsViewModel(goalService: goalService))
+    init(
+        goalService: any HydrationGoalServiceProtocol,
+        quickAddAmountsService: any QuickAddAmountsServiceProtocol
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: SettingsViewModel(
+                goalService: goalService,
+                quickAddAmountsService: quickAddAmountsService
+            )
+        )
     }
 
     var body: some View {
@@ -32,6 +40,41 @@ struct SettingsView: View {
                     Text("Daily Water Goal")
                 } footer: {
                     Text("Your goal is stored on this device and can be changed at any time.")
+                }
+
+                Section {
+                    ForEach(viewModel.quickAddAmountTexts.indices, id: \.self) { index in
+                        HStack {
+                            Text("Slot \(index + 1)")
+
+                            Spacer()
+
+                            TextField(
+                                "Amount",
+                                text: $viewModel.quickAddAmountTexts[index]
+                            )
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 120)
+                            .accessibilityLabel("Quick-add slot \(index + 1) in milliliters")
+
+                            Text("ml")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Button("Save Quick Add Amounts") {
+                        viewModel.saveQuickAddAmounts()
+                    }
+                    .disabled(!viewModel.canSaveQuickAddAmounts)
+
+                    if let errorMessage = viewModel.quickAddErrorMessage {
+                        AquaErrorMessage(message: errorMessage)
+                    }
+                } header: {
+                    Text("Quick Add Amounts")
+                } footer: {
+                    Text("Choose the three amounts shown on the Today screen. These values are stored on this device.")
                 }
 
                 Section("About") {
