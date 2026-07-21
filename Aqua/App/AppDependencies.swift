@@ -6,6 +6,7 @@ final class AppDependencies {
     let modelContainer: ModelContainer
     let hydrationTrackingService: any HydrationTrackingServiceProtocol
     let hydrationGoalService: any HydrationGoalServiceProtocol
+    let quickAddAmountsService: any QuickAddAmountsServiceProtocol
     let dateProvider: any DateProviding
 
     init(
@@ -22,6 +23,7 @@ final class AppDependencies {
         self.modelContainer = modelContainer
         hydrationTrackingService = HydrationTrackingService(repository: repository)
         hydrationGoalService = HydrationGoalService(preferencesStore: preferencesStore)
+        quickAddAmountsService = QuickAddAmountsService(preferencesStore: preferencesStore)
         dateProvider = SystemDateProvider()
     }
 }

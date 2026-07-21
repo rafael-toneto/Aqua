@@ -3,16 +3,20 @@ import SwiftUI
 struct TodayView: View {
     @StateObject private var viewModel: TodayViewModel
     @State private var isShowingCustomAmount = false
+    @State private var quickAddAmounts = HydrationDefaults.quickAddAmountsInMilliliters
 
     private let trackingService: any HydrationTrackingServiceProtocol
+    private let quickAddAmountsService: any QuickAddAmountsServiceProtocol
     private let dateProvider: any DateProviding
 
     init(
         trackingService: any HydrationTrackingServiceProtocol,
         goalService: any HydrationGoalServiceProtocol,
+        quickAddAmountsService: any QuickAddAmountsServiceProtocol,
         dateProvider: any DateProviding
     ) {
         self.trackingService = trackingService
+        self.quickAddAmountsService = quickAddAmountsService
         self.dateProvider = dateProvider
         _viewModel = StateObject(
             wrappedValue: TodayViewModel(
@@ -41,7 +45,7 @@ struct TodayView: View {
 
                 Section {
                     QuickAddWaterView(
-                        amountsInMilliliters: HydrationDefaults.quickAddAmountsInMilliliters,
+                        amountsInMilliliters: quickAddAmounts,
                         addWater: { amount in
                             Task { await viewModel.addQuickWater(amountInMilliliters: amount) }
                         },
@@ -75,6 +79,7 @@ struct TodayView: View {
                 }
             }
             .onAppear {
+                quickAddAmounts = quickAddAmountsService.amountsInMilliliters
                 Task { await viewModel.load() }
             }
             .refreshable { await viewModel.load() }

@@ -12,7 +12,7 @@ struct QuickAddWaterView: View {
                     .font(.headline)
 
                 HStack(spacing: AquaSpacing.small) {
-                    ForEach(amountsInMilliliters, id: \.self) { amount in
+                    ForEach(Array(amountsInMilliliters.enumerated()), id: \.offset) { _, amount in
                         Button {
                             addWater(amount)
                         } label: {

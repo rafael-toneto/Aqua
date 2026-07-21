@@ -20,6 +20,7 @@ struct AquaApp: App {
                 AquaRootView(
                     trackingService: dependencies.hydrationTrackingService,
                     goalService: dependencies.hydrationGoalService,
+                    quickAddAmountsService: dependencies.quickAddAmountsService,
                     dateProvider: dependencies.dateProvider
                 )
                 .modelContainer(dependencies.modelContainer)
