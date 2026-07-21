@@ -4,6 +4,11 @@ import Foundation
 protocol HydrationTrackingServiceProtocol {
     func entries(for date: Date) async throws -> [HydrationEntry]
     func summary(for date: Date, dailyGoal: Double) async throws -> HydrationDaySummary
+    func summaries(
+        from startDate: Date,
+        through endDate: Date,
+        dailyGoal: Double
+    ) async throws -> [HydrationDaySummary]
     func addWater(
         amountInMilliliters: Double,
         date: Date,
@@ -34,6 +39,48 @@ final class HydrationTrackingService: HydrationTrackingServiceProtocol {
             entries: entries,
             progress: DailyHydrationProgress.calculate(entries: entries, dailyGoal: dailyGoal)
         )
+    }
+
+    func summaries(
+        from startDate: Date,
+        through endDate: Date,
+        dailyGoal: Double
+    ) async throws -> [HydrationDaySummary] {
+        let firstDay = calendar.startOfDay(for: startDate)
+        let lastDay = calendar.startOfDay(for: endDate)
+        guard firstDay <= lastDay,
+              let endExclusive = calendar.date(byAdding: .day, value: 1, to: lastDay) else {
+            return []
+        }
+
+        let entries = try await repository.entries(from: firstDay, to: endExclusive)
+        let entriesByDay = Dictionary(grouping: entries) { entry in
+            calendar.startOfDay(for: entry.date)
+        }
+
+        var summaries: [HydrationDaySummary] = []
+        var day = firstDay
+
+        while day <= lastDay {
+            let dayEntries = entriesByDay[day, default: []]
+            summaries.append(
+                HydrationDaySummary(
+                    date: day,
+                    entries: dayEntries,
+                    progress: DailyHydrationProgress.calculate(
+                        entries: dayEntries,
+                        dailyGoal: dailyGoal
+                    )
+                )
+            )
+
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: day) else {
+                break
+            }
+            day = nextDay
+        }
+
+        return summaries
     }
 
     func addWater(

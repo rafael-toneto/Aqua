@@ -87,6 +87,27 @@ final class HydrationTrackingServiceTests: XCTestCase {
         XCTAssertEqual(secondDayProgress.consumedAmount, 500, accuracy: 0.001)
     }
 
+    func testHistorySummariesIncludeDaysWithoutEntries() async throws {
+        let firstDay = try date(year: 2026, month: 7, day: 20, hour: 12)
+        let lastDay = try date(year: 2026, month: 7, day: 22, hour: 12)
+        let repository = FakeHydrationRepository(entries: [
+            HydrationEntry(amountInMilliliters: 600, date: firstDay, source: .quickAdd),
+            HydrationEntry(amountInMilliliters: 900, date: lastDay, source: .manual)
+        ])
+        let service = HydrationTrackingService(repository: repository, calendar: calendar)
+
+        let summaries = try await service.summaries(
+            from: firstDay,
+            through: lastDay,
+            dailyGoal: 2_000
+        )
+
+        XCTAssertEqual(summaries.count, 3)
+        XCTAssertEqual(summaries[0].progress.consumedAmount, 600, accuracy: 0.001)
+        XCTAssertEqual(summaries[1].progress.consumedAmount, 0, accuracy: 0.001)
+        XCTAssertEqual(summaries[2].progress.consumedAmount, 900, accuracy: 0.001)
+    }
+
     func testProgressUpdatesAfterAddingEntry() async throws {
         let day = try date(year: 2026, month: 7, day: 20, hour: 12)
         let repository = FakeHydrationRepository()

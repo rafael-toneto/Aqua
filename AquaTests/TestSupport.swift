@@ -22,6 +22,12 @@ final class FakeHydrationRepository: HydrationRepository {
             .filter { calendar.isDate($0.date, inSameDayAs: date) }
             .sorted { $0.date < $1.date }
     }
+
+    func entries(from startDate: Date, to endDate: Date) async throws -> [HydrationEntry] {
+        storedEntries
+            .filter { $0.date >= startDate && $0.date < endDate }
+            .sorted { $0.date < $1.date }
+    }
 }
 
 struct FixedDateProvider: DateProviding {

@@ -16,6 +16,15 @@ struct AquaRootView: View {
                 Label("Today", systemImage: "drop.fill")
             }
 
+            HistoryView(
+                trackingService: trackingService,
+                goalService: goalService,
+                dateProvider: dateProvider
+            )
+            .tabItem {
+                Label("History", systemImage: "chart.bar.fill")
+            }
+
             SettingsView(goalService: goalService)
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")
