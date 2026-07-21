@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HydrationProgressView: View {
+    @Environment(\.waterVolumeUnit) private var waterVolumeUnit
+
     let progress: DailyHydrationProgress
 
     private var normalizedProgress: Double {
@@ -22,11 +24,18 @@ struct HydrationProgressView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
 
-                        Text(WaterAmountFormatter.string(from: progress.consumedAmount))
+                        Text(
+                            WaterAmountFormatter.string(
+                                from: progress.consumedAmount,
+                                unit: waterVolumeUnit
+                            )
+                        )
                             .font(.title2.weight(.bold))
                             .contentTransition(.numericText())
 
-                        Text("of \(WaterAmountFormatter.string(from: progress.dailyGoal))")
+                        Text(
+                            "of \(WaterAmountFormatter.string(from: progress.dailyGoal, unit: waterVolumeUnit))"
+                        )
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -78,11 +87,12 @@ struct HydrationProgressView: View {
         if progress.hasReachedGoal {
             return "Daily goal reached"
         }
-        return "\(WaterAmountFormatter.string(from: progress.remainingAmount)) remaining"
+        return "\(WaterAmountFormatter.string(from: progress.remainingAmount, unit: waterVolumeUnit)) remaining"
     }
 
     private var accessibilityValue: String {
-        "\(WaterAmountFormatter.string(from: progress.consumedAmount)) consumed of "
-            + "\(WaterAmountFormatter.string(from: progress.dailyGoal)), \(statusText), \(percentageText)"
+        "\(WaterAmountFormatter.string(from: progress.consumedAmount, unit: waterVolumeUnit)) consumed of "
+            + "\(WaterAmountFormatter.string(from: progress.dailyGoal, unit: waterVolumeUnit)), "
+            + "\(statusText), \(percentageText)"
     }
 }

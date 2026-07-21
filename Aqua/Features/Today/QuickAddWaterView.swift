@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct QuickAddWaterView: View {
+    @Environment(\.waterVolumeUnit) private var waterVolumeUnit
+
     let amountsInMilliliters: [Double]
     let addWater: (Double) -> Void
     let showCustomAmount: () -> Void
@@ -16,13 +18,17 @@ struct QuickAddWaterView: View {
                         Button {
                             addWater(amount)
                         } label: {
-                            Text("+\(WaterAmountFormatter.string(from: amount))")
+                            Text(
+                                "+\(WaterAmountFormatter.string(from: amount, unit: waterVolumeUnit))"
+                            )
                                 .font(.subheadline.weight(.semibold))
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.bordered)
                         .buttonBorderShape(.roundedRectangle(radius: AquaCornerRadius.control))
-                        .accessibilityLabel("Add \(WaterAmountFormatter.string(from: amount)) of water")
+                        .accessibilityLabel(
+                            "Add \(WaterAmountFormatter.string(from: amount, unit: waterVolumeUnit)) of water"
+                        )
                     }
                 }
 

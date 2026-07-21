@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AquaRootView: View {
+    @AppStorage(WaterVolumeUnit.preferenceKey) private var waterVolumeUnitRawValue = WaterVolumeUnit.metric.rawValue
+
     let trackingService: any HydrationTrackingServiceProtocol
     let goalService: any HydrationGoalServiceProtocol
     let quickAddAmountsService: any QuickAddAmountsServiceProtocol
@@ -36,5 +38,10 @@ struct AquaRootView: View {
                 }
         }
         .tint(.blue)
+        .environment(\.waterVolumeUnit, waterVolumeUnit)
+    }
+
+    private var waterVolumeUnit: WaterVolumeUnit {
+        WaterVolumeUnit(rawValue: waterVolumeUnitRawValue) ?? .metric
     }
 }

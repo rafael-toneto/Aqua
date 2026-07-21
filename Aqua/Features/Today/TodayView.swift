@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TodayView: View {
+    @Environment(\.waterVolumeUnit) private var waterVolumeUnit
     @StateObject private var viewModel: TodayViewModel
     @State private var isShowingCustomAmount = false
     @State private var quickAddAmounts = HydrationDefaults.quickAddAmountsInMilliliters
@@ -87,6 +88,7 @@ struct TodayView: View {
                 AddWaterSheet(
                     trackingService: trackingService,
                     dateProvider: dateProvider,
+                    waterVolumeUnit: waterVolumeUnit,
                     onSaved: { await viewModel.didAddCustomWater() }
                 )
             }

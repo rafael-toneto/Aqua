@@ -3,6 +3,7 @@ import SwiftUI
 struct HistoryCalendarSheet: View {
     @ObservedObject var viewModel: HistoryViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.waterVolumeUnit) private var waterVolumeUnit
 
     private let calendar = HistoryCalendar.calendar
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
@@ -117,7 +118,7 @@ struct HistoryCalendarSheet: View {
         .accessibilityValue(
             isFuture
                 ? "Future date"
-                : "\(WaterAmountFormatter.string(from: summary.progress.consumedAmount)) consumed"
+                : "\(WaterAmountFormatter.string(from: summary.progress.consumedAmount, unit: waterVolumeUnit)) consumed"
         )
     }
 

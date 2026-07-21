@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HistoryView: View {
+    @Environment(\.waterVolumeUnit) private var waterVolumeUnit
     @StateObject private var viewModel: HistoryViewModel
     @State private var isShowingCalendar = false
 
@@ -112,7 +113,7 @@ struct HistoryView: View {
                 .disabled(isFuture)
                 .accessibilityLabel(date.formatted(date: .complete, time: .omitted))
                 .accessibilityValue(
-                    "\(WaterAmountFormatter.string(from: summary.progress.consumedAmount)) consumed"
+                    "\(WaterAmountFormatter.string(from: summary.progress.consumedAmount, unit: waterVolumeUnit)) consumed"
                 )
             }
         }
@@ -129,12 +130,19 @@ struct HistoryView: View {
                 .padding(.top, AquaSpacing.small)
 
             VStack(spacing: AquaSpacing.extraSmall) {
-                Text(WaterAmountFormatter.string(from: progress.consumedAmount))
+                Text(
+                    WaterAmountFormatter.string(
+                        from: progress.consumedAmount,
+                        unit: waterVolumeUnit
+                    )
+                )
                     .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     .foregroundStyle(.blue)
                     .contentTransition(.numericText())
 
-                Text("of \(WaterAmountFormatter.string(from: progress.dailyGoal))")
+                Text(
+                    "of \(WaterAmountFormatter.string(from: progress.dailyGoal, unit: waterVolumeUnit))"
+                )
                     .font(.headline)
                     .foregroundStyle(.secondary)
             }
@@ -144,7 +152,10 @@ struct HistoryView: View {
             HStack(spacing: 0) {
                 metric(
                     title: "Remaining",
-                    value: WaterAmountFormatter.string(from: progress.remainingAmount),
+                    value: WaterAmountFormatter.string(
+                        from: progress.remainingAmount,
+                        unit: waterVolumeUnit
+                    ),
                     systemImage: "drop"
                 )
 
@@ -170,7 +181,12 @@ struct HistoryView: View {
                     .font(.headline)
                     .foregroundStyle(.blue)
 
-                Text(WaterAmountFormatter.string(from: viewModel.weeklyConsumedAmount))
+                Text(
+                    WaterAmountFormatter.string(
+                        from: viewModel.weeklyConsumedAmount,
+                        unit: waterVolumeUnit
+                    )
+                )
                     .font(.title.bold())
                     .contentTransition(.numericText())
 
@@ -185,7 +201,9 @@ struct HistoryView: View {
                 HStack {
                     Text("\(viewModel.reachedGoalDaysThisWeek) goal days")
                     Spacer()
-                    Text("Goal: \(WaterAmountFormatter.string(from: viewModel.weeklyGoalAmount))")
+                    Text(
+                        "Goal: \(WaterAmountFormatter.string(from: viewModel.weeklyGoalAmount, unit: waterVolumeUnit))"
+                    )
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
