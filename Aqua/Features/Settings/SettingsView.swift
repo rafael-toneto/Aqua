@@ -34,9 +34,47 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
+                    Button {
+                        viewModel.toggleVolumeDisplayUnit()
+                    } label: {
+                        HStack(spacing: AquaSpacing.medium) {
+                            Image(systemName: "ruler")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(.blue)
+                                .frame(width: 28)
+                                .accessibilityHidden(true)
+
+                            Text("Measurement Unit")
+                                .foregroundStyle(.primary)
+
+                            Spacer(minLength: AquaSpacing.small)
+
+                            Text(viewModel.volumeDisplayUnit.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+
+                            Image(systemName: "arrow.left.arrow.right")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.blue)
+                                .accessibilityHidden(true)
+                        }
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Measurement unit")
+                    .accessibilityValue(viewModel.volumeDisplayUnit.accessibilityDescription)
+                    .accessibilityHint("Switches between liters and milliliters, and fluid ounces")
+                } header: {
+                    Text("Units")
+                } footer: {
+                    Text("Tap to switch how water amounts are displayed and entered.")
+                }
+
+                Section {
                     editableSettingRow(
                         title: "Daily goal",
-                        value: WaterAmountFormatter.string(from: viewModel.savedGoalInMilliliters),
+                        value: viewModel.formattedAmount(from: viewModel.savedGoalInMilliliters),
                         systemImage: "target",
                         accessibilityHint: "Sets the amount of water you aim to drink each day"
                     ) {
@@ -56,7 +94,7 @@ struct SettingsView: View {
                     ForEach(viewModel.savedQuickAddAmountsInMilliliters.indices, id: \.self) { index in
                         editableSettingRow(
                             title: "Slot \(index + 1)",
-                            value: WaterAmountFormatter.string(
+                            value: viewModel.formattedAmount(
                                 from: viewModel.savedQuickAddAmountsInMilliliters[index]
                             ),
                             systemImage: "drop.fill",
@@ -152,10 +190,11 @@ struct SettingsView: View {
             AmountEditorSheet(
                 title: "Edit Daily Goal",
                 fieldLabel: "Daily water goal",
-                initialValue: String(Int(viewModel.savedGoalInMilliliters.rounded())),
+                initialValue: viewModel.editorText(from: viewModel.savedGoalInMilliliters),
+                unitSymbol: viewModel.volumeDisplayUnit.symbol,
                 systemImage: "target",
-                footer: "Enter a whole number greater than zero.",
-                accessibilityLabel: "Daily water goal in milliliters"
+                footer: "Enter an amount greater than zero.",
+                accessibilityLabel: "Daily water goal in \(viewModel.volumeDisplayUnit.accessibilityDescription)"
             ) { newValue in
                 viewModel.goalText = newValue
                 viewModel.save()
@@ -166,18 +205,15 @@ struct SettingsView: View {
             AmountEditorSheet(
                 title: "Edit Slot \(index + 1)",
                 fieldLabel: "Quick-add amount",
-                initialValue: String(
-                    Int(viewModel.savedQuickAddAmountsInMilliliters[index].rounded())
+                initialValue: viewModel.editorText(
+                    from: viewModel.savedQuickAddAmountsInMilliliters[index]
                 ),
+                unitSymbol: viewModel.volumeDisplayUnit.symbol,
                 systemImage: "drop.fill",
-                footer: "Enter a whole number greater than zero.",
-                accessibilityLabel: "Quick-add slot \(index + 1) in milliliters"
+                footer: "Enter an amount greater than zero.",
+                accessibilityLabel: "Quick-add slot \(index + 1) in \(viewModel.volumeDisplayUnit.accessibilityDescription)"
             ) { newValue in
-                viewModel.quickAddAmountTexts = viewModel.savedQuickAddAmountsInMilliliters.map {
-                    String(Int($0.rounded()))
-                }
-                viewModel.quickAddAmountTexts[index] = newValue
-                viewModel.saveQuickAddAmounts()
+                viewModel.saveQuickAddAmount(newValue, at: index)
                 return viewModel.quickAddErrorMessage
             }
         }
@@ -200,6 +236,7 @@ private struct AmountEditorSheet: View {
     private let title: String
     private let fieldLabel: String
     private let initialValue: String
+    private let unitSymbol: String
     private let systemImage: String
     private let footer: String
     private let accessibilityLabel: String
@@ -209,6 +246,7 @@ private struct AmountEditorSheet: View {
         title: String,
         fieldLabel: String,
         initialValue: String,
+        unitSymbol: String,
         systemImage: String,
         footer: String,
         accessibilityLabel: String,
@@ -217,6 +255,7 @@ private struct AmountEditorSheet: View {
         self.title = title
         self.fieldLabel = fieldLabel
         self.initialValue = initialValue
+        self.unitSymbol = unitSymbol
         self.systemImage = systemImage
         self.footer = footer
         self.accessibilityLabel = accessibilityLabel
@@ -236,12 +275,12 @@ private struct AmountEditorSheet: View {
                             .accessibilityHidden(true)
 
                         TextField(fieldLabel, text: $amountText)
-                            .keyboardType(.numberPad)
+                            .keyboardType(.decimalPad)
                             .focused($isAmountFieldFocused)
                             .font(.system(.title2, design: .rounded, weight: .semibold))
                             .accessibilityLabel(accessibilityLabel)
 
-                        Text("ml")
+                        Text(unitSymbol)
                             .font(.body.weight(.medium))
                             .foregroundStyle(.secondary)
                     }
@@ -275,20 +314,24 @@ private struct AmountEditorSheet: View {
         .presentationDragIndicator(.visible)
     }
 
-    private var parsedAmount: Int? {
+    private var parsedAmount: Double? {
         let trimmedText = amountText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let amount = Int(trimmedText), amount > 0 else { return nil }
+        let normalizedText = trimmedText.replacingOccurrences(of: ",", with: ".")
+        guard let amount = Double(normalizedText), amount.isFinite, amount > 0 else { return nil }
         return amount
     }
 
     private var canSave: Bool {
-        guard let parsedAmount else { return false }
-        return parsedAmount != Int(initialValue)
+        guard let parsedAmount,
+              let initialAmount = Double(initialValue.replacingOccurrences(of: ",", with: ".")) else {
+            return false
+        }
+        return parsedAmount != initialAmount
     }
 
     private func save() {
-        guard let parsedAmount else { return }
-        errorMessage = onSave(String(parsedAmount))
+        guard parsedAmount != nil else { return }
+        errorMessage = onSave(amountText.trimmingCharacters(in: .whitespacesAndNewlines))
 
         if errorMessage == nil {
             dismiss()

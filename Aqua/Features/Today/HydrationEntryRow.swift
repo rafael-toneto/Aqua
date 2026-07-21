@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HydrationEntryRow: View {
+    @Environment(\.waterVolumeUnit) private var waterVolumeUnit
+
     let entry: HydrationEntry
 
     var body: some View {
@@ -12,7 +14,12 @@ struct HydrationEntryRow: View {
                 .background(.blue.opacity(0.12), in: Circle())
 
             VStack(alignment: .leading, spacing: AquaSpacing.extraSmall) {
-                Text(WaterAmountFormatter.string(from: entry.amountInMilliliters))
+                Text(
+                    WaterAmountFormatter.string(
+                        from: entry.amountInMilliliters,
+                        unit: waterVolumeUnit
+                    )
+                )
                     .font(.body.weight(.semibold))
                 Text(sourceName)
                     .font(.caption)
@@ -27,7 +34,9 @@ struct HydrationEntryRow: View {
         }
         .padding(.vertical, AquaSpacing.extraSmall)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(WaterAmountFormatter.string(from: entry.amountInMilliliters)), \(sourceName)")
+        .accessibilityLabel(
+            "\(WaterAmountFormatter.string(from: entry.amountInMilliliters, unit: waterVolumeUnit)), \(sourceName)"
+        )
         .accessibilityValue(entry.date.formatted(date: .omitted, time: .shortened))
     }
 

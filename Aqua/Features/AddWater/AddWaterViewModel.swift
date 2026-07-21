@@ -7,23 +7,26 @@ final class AddWaterViewModel: ObservableObject {
     @Published private(set) var isSaving = false
     @Published var errorMessage: String?
 
+    let waterVolumeUnit: WaterVolumeUnit
+
     private let trackingService: any HydrationTrackingServiceProtocol
     private let dateProvider: any DateProviding
 
     init(
         trackingService: any HydrationTrackingServiceProtocol,
-        dateProvider: any DateProviding
+        dateProvider: any DateProviding,
+        waterVolumeUnit: WaterVolumeUnit
     ) {
         self.trackingService = trackingService
         self.dateProvider = dateProvider
+        self.waterVolumeUnit = waterVolumeUnit
     }
 
     var amountInMilliliters: Double? {
-        let trimmedText = amountText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let amount = Int(trimmedText), amount > 0 else {
-            return nil
-        }
-        return Double(amount)
+        WaterAmountFormatter.milliliters(
+            fromDisplayedText: amountText,
+            unit: waterVolumeUnit
+        )
     }
 
     var canSave: Bool {

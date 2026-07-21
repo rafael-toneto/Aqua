@@ -9,28 +9,30 @@ final class SettingsViewModel: ObservableObject {
         String(Int($0.rounded()))
     }
     @Published private(set) var savedQuickAddAmountsInMilliliters = HydrationDefaults.quickAddAmountsInMilliliters
+    @Published private(set) var volumeDisplayUnit: WaterVolumeUnit
     @Published private(set) var feedbackTrigger = 0
     @Published var errorMessage: String?
     @Published var quickAddErrorMessage: String?
 
     private let goalService: any HydrationGoalServiceProtocol
     private let quickAddAmountsService: any QuickAddAmountsServiceProtocol
+    private let userDefaults: UserDefaults
 
     init(
         goalService: any HydrationGoalServiceProtocol,
-        quickAddAmountsService: any QuickAddAmountsServiceProtocol
+        quickAddAmountsService: any QuickAddAmountsServiceProtocol,
+        userDefaults: UserDefaults = .standard
     ) {
         self.goalService = goalService
         self.quickAddAmountsService = quickAddAmountsService
+        self.userDefaults = userDefaults
+        volumeDisplayUnit = userDefaults.string(forKey: WaterVolumeUnit.preferenceKey)
+            .flatMap(WaterVolumeUnit.init(rawValue:)) ?? .metric
         load()
     }
 
     var proposedGoalInMilliliters: Double? {
-        let trimmedText = goalText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let amount = Int(trimmedText), amount > 0 else {
-            return nil
-        }
-        return Double(amount)
+        milliliters(fromDisplayedText: goalText)
     }
 
     var canSave: Bool {
@@ -39,11 +41,7 @@ final class SettingsViewModel: ObservableObject {
     }
 
     var proposedQuickAddAmountsInMilliliters: [Double]? {
-        let amounts = quickAddAmountTexts.compactMap { text -> Double? in
-            let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let amount = Int(trimmedText), amount > 0 else { return nil }
-            return Double(amount)
-        }
+        let amounts = quickAddAmountTexts.compactMap(milliliters(fromDisplayedText:))
 
         guard amounts.count == HydrationDefaults.quickAddAmountsInMilliliters.count else {
             return nil
@@ -59,12 +57,31 @@ final class SettingsViewModel: ObservableObject {
     func load() {
         let goal = goalService.dailyGoalInMilliliters
         savedGoalInMilliliters = goal
-        goalText = String(Int(goal.rounded()))
+        goalText = editorText(from: goal)
         let quickAddAmounts = quickAddAmountsService.amountsInMilliliters
         savedQuickAddAmountsInMilliliters = quickAddAmounts
-        quickAddAmountTexts = quickAddAmounts.map { String(Int($0.rounded())) }
+        quickAddAmountTexts = quickAddAmounts.map(editorText(from:))
         errorMessage = nil
         quickAddErrorMessage = nil
+    }
+
+    func toggleVolumeDisplayUnit() {
+        volumeDisplayUnit = volumeDisplayUnit == .metric ? .fluidOunces : .metric
+        userDefaults.set(volumeDisplayUnit.rawValue, forKey: WaterVolumeUnit.preferenceKey)
+
+        goalText = editorText(from: savedGoalInMilliliters)
+        quickAddAmountTexts = savedQuickAddAmountsInMilliliters.map(editorText(from:))
+        errorMessage = nil
+        quickAddErrorMessage = nil
+        feedbackTrigger += 1
+    }
+
+    func formattedAmount(from amountInMilliliters: Double) -> String {
+        WaterAmountFormatter.string(from: amountInMilliliters, unit: volumeDisplayUnit)
+    }
+
+    func editorText(from amountInMilliliters: Double) -> String {
+        WaterAmountFormatter.editorText(from: amountInMilliliters, unit: volumeDisplayUnit)
     }
 
     func save() {
@@ -76,7 +93,7 @@ final class SettingsViewModel: ObservableObject {
         do {
             try goalService.updateDailyGoal(to: proposedGoalInMilliliters)
             savedGoalInMilliliters = proposedGoalInMilliliters
-            goalText = String(Int(proposedGoalInMilliliters.rounded()))
+            goalText = editorText(from: proposedGoalInMilliliters)
             errorMessage = nil
             feedbackTrigger += 1
         } catch {
@@ -90,14 +107,37 @@ final class SettingsViewModel: ObservableObject {
             return
         }
 
+        saveQuickAddAmounts(proposedQuickAddAmountsInMilliliters)
+    }
+
+    func saveQuickAddAmount(_ displayedText: String, at index: Int) {
+        guard savedQuickAddAmountsInMilliliters.indices.contains(index),
+              let amountInMilliliters = milliliters(fromDisplayedText: displayedText) else {
+            quickAddErrorMessage = HydrationError.invalidQuickAddAmounts.localizedDescription
+            return
+        }
+
+        var updatedAmounts = savedQuickAddAmountsInMilliliters
+        updatedAmounts[index] = amountInMilliliters
+        saveQuickAddAmounts(updatedAmounts)
+    }
+
+    private func saveQuickAddAmounts(_ amountsInMilliliters: [Double]) {
         do {
-            try quickAddAmountsService.updateAmounts(proposedQuickAddAmountsInMilliliters)
-            savedQuickAddAmountsInMilliliters = proposedQuickAddAmountsInMilliliters
-            quickAddAmountTexts = proposedQuickAddAmountsInMilliliters.map { String(Int($0.rounded())) }
+            try quickAddAmountsService.updateAmounts(amountsInMilliliters)
+            savedQuickAddAmountsInMilliliters = amountsInMilliliters
+            quickAddAmountTexts = amountsInMilliliters.map(editorText(from:))
             quickAddErrorMessage = nil
             feedbackTrigger += 1
         } catch {
             quickAddErrorMessage = error.localizedDescription
         }
+    }
+
+    private func milliliters(fromDisplayedText text: String) -> Double? {
+        WaterAmountFormatter.milliliters(
+            fromDisplayedText: text,
+            unit: volumeDisplayUnit
+        )
     }
 }

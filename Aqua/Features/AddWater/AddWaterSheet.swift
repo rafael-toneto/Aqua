@@ -10,12 +10,14 @@ struct AddWaterSheet: View {
     init(
         trackingService: any HydrationTrackingServiceProtocol,
         dateProvider: any DateProviding,
+        waterVolumeUnit: WaterVolumeUnit,
         onSaved: @escaping @MainActor () async -> Void
     ) {
         _viewModel = StateObject(
             wrappedValue: AddWaterViewModel(
                 trackingService: trackingService,
-                dateProvider: dateProvider
+                dateProvider: dateProvider,
+                waterVolumeUnit: waterVolumeUnit
             )
         )
         self.onSaved = onSaved
@@ -27,19 +29,21 @@ struct AddWaterSheet: View {
                 Section {
                     HStack {
                         TextField("Amount", text: $viewModel.amountText)
-                            .keyboardType(.numberPad)
+                            .keyboardType(.decimalPad)
                             .focused($isAmountFieldFocused)
                             .font(.title2.weight(.semibold))
-                            .accessibilityLabel("Water amount in milliliters")
+                            .accessibilityLabel(
+                                "Water amount in \(viewModel.waterVolumeUnit.accessibilityDescription)"
+                            )
 
-                        Text("ml")
+                        Text(viewModel.waterVolumeUnit.symbol)
                             .font(.body.weight(.medium))
                             .foregroundStyle(.secondary)
                     }
                 } header: {
                     Text("Water Amount")
                 } footer: {
-                    Text("Enter a whole number greater than zero.")
+                    Text("Enter an amount greater than zero.")
                 }
 
                 if let errorMessage = viewModel.errorMessage {
