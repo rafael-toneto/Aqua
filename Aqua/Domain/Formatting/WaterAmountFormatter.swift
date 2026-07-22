@@ -73,6 +73,19 @@ enum WaterAmountFormatter {
         }
     }
 
+    static func spokenString(from amountInMilliliters: Double) -> String {
+        if amountInMilliliters >= 1_000 {
+            let liters = amountInMilliliters / 1_000
+            let number = formattedNumber(liters, maximumFractionDigits: 1)
+            let unit = liters == 1 ? "liter" : "liters"
+            return "\(number) \(unit)"
+        }
+
+        let number = formattedNumber(amountInMilliliters, maximumFractionDigits: 0)
+        let unit = amountInMilliliters == 1 ? "milliliter" : "milliliters"
+        return "\(number) \(unit)"
+    }
+
     static func milliliters(
         fromDisplayedText text: String,
         unit: WaterVolumeUnit

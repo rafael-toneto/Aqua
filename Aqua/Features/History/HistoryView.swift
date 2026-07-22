@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HistoryView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.waterVolumeUnit) private var waterVolumeUnit
     @StateObject private var viewModel: HistoryViewModel
     @State private var isShowingCalendar = false
@@ -43,6 +44,10 @@ struct HistoryView: View {
                 }
             }
             .task { await viewModel.load() }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                Task { await viewModel.load() }
+            }
             .refreshable { await viewModel.load() }
             .sheet(isPresented: $isShowingCalendar) {
                 HistoryCalendarSheet(viewModel: viewModel)

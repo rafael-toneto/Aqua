@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TodayView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.waterVolumeUnit) private var waterVolumeUnit
     @StateObject private var viewModel: TodayViewModel
     @State private var isShowingCustomAmount = false
@@ -80,6 +81,11 @@ struct TodayView: View {
                 }
             }
             .onAppear {
+                quickAddAmounts = quickAddAmountsService.amountsInMilliliters
+                Task { await viewModel.load() }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
                 quickAddAmounts = quickAddAmountsService.amountsInMilliliters
                 Task { await viewModel.load() }
             }

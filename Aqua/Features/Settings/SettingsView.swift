@@ -123,7 +123,6 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    comingLaterRow("Siri and Shortcuts", systemImage: "waveform")
                     comingLaterRow("Intelligent insights", systemImage: "sparkles")
                     comingLaterRow("HealthKit", systemImage: "heart.fill")
                 } header: {
