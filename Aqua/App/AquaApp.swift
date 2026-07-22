@@ -6,11 +6,7 @@ struct AquaApp: App {
     private let dependenciesResult: Result<AppDependencies, Error>
 
     init() {
-        do {
-            dependenciesResult = .success(try AppDependencies())
-        } catch {
-            dependenciesResult = .failure(error)
-        }
+        dependenciesResult = AppDependencies.shared
     }
 
     var body: some Scene {
