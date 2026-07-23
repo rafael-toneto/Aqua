@@ -14,20 +14,39 @@ final class AppDependencies {
     let quickAddAmountsService: any QuickAddAmountsServiceProtocol
     let dateProvider: any DateProviding
     let hydrationIntentHandler: any HydrationIntentHandling
+    let adaptivePlanService: AdaptivePlanService
+    let planningPreferencesStore: any PlanningPreferencesStoring
+    private let dynamicPlanSynchronizer: DynamicPlanSynchronizer
 
     init(
         isStoredInMemoryOnly: Bool = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     ) throws {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: isStoredInMemoryOnly)
         let modelContainer = try ModelContainer(
-            for: SwiftDataHydrationEntry.self,
+            for: SwiftDataHydrationEntry.self, SwiftDataDailyPlan.self,
             configurations: configuration
         )
         let repository = SwiftDataHydrationRepository(modelContext: modelContainer.mainContext)
+        let planRepository = SwiftDataDailyPlanRepository(modelContext: modelContainer.mainContext)
         let preferencesStore = HydrationPreferencesStore()
+        let planningPreferencesStore = PlanningPreferencesStore()
         let hydrationTrackingService = HydrationTrackingService(repository: repository)
         let hydrationGoalService = HydrationGoalService(preferencesStore: preferencesStore)
         let dateProvider = SystemDateProvider()
+
+        let adaptivePlanService = AdaptivePlanService(
+            trackingService: hydrationTrackingService,
+            goalService: hydrationGoalService,
+            preferencesStore: planningPreferencesStore,
+            repository: planRepository,
+            adaptiveGenerator: FoundationModelsAdaptivePlanGenerator(),
+            fallbackGenerator: DeterministicAdaptivePlanGenerator()
+        )
+        let dynamicPlanSynchronizer = DynamicPlanSynchronizer(
+            planService: adaptivePlanService,
+            dateProvider: dateProvider
+        )
+        hydrationTrackingService.setEntriesChangeObserver(dynamicPlanSynchronizer)
 
         self.modelContainer = modelContainer
         hydrationRepository = repository
@@ -35,6 +54,9 @@ final class AppDependencies {
         self.hydrationGoalService = hydrationGoalService
         quickAddAmountsService = QuickAddAmountsService(preferencesStore: preferencesStore)
         self.dateProvider = dateProvider
+        self.planningPreferencesStore = planningPreferencesStore
+        self.adaptivePlanService = adaptivePlanService
+        self.dynamicPlanSynchronizer = dynamicPlanSynchronizer
         hydrationIntentHandler = HydrationIntentHandler(
             trackingService: hydrationTrackingService,
             goalService: hydrationGoalService,

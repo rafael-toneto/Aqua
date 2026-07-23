@@ -24,5 +24,6 @@ final class HydrationGoalService: HydrationGoalServiceProtocol {
         }
 
         preferencesStore.dailyGoalInMilliliters = amountInMilliliters
+        NotificationCenter.default.post(name: .hydrationGoalDidChange, object: nil)
     }
 }

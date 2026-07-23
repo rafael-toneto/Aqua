@@ -46,12 +46,18 @@ struct HydrationEntryRow: View {
             "Quick add"
         case .manual:
             "Custom amount"
+        case .plan:
+            "Daily plan"
         default:
             "Added water"
         }
     }
 
     private var sourceIcon: String {
-        entry.source == .quickAdd ? "bolt.fill" : "drop.fill"
+        switch entry.source {
+        case .quickAdd: "bolt.fill"
+        case .plan: "clock.badge.checkmark"
+        default: "drop.fill"
+        }
     }
 }

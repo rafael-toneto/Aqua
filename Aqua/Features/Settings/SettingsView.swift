@@ -87,7 +87,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Daily Water Goal")
                 } footer: {
-                    Text("Your goal is stored on this device and can be changed at any time.")
+                    Text("Your goal is stored on this device. Changing it also updates today’s plan.")
                 }
 
                 Section {

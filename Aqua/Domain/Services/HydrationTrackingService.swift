@@ -1,6 +1,11 @@
 import Foundation
 
 @MainActor
+protocol HydrationEntriesChangeObserving: AnyObject {
+    func hydrationEntriesDidChange() async
+}
+
+@MainActor
 protocol HydrationTrackingServiceProtocol {
     func entries(for date: Date) async throws -> [HydrationEntry]
     func summary(for date: Date, dailyGoal: Double) async throws -> HydrationDaySummary
@@ -12,7 +17,9 @@ protocol HydrationTrackingServiceProtocol {
     func addWater(
         amountInMilliliters: Double,
         date: Date,
-        source: HydrationEntrySource
+        source: HydrationEntrySource,
+        planMomentID: UUID?,
+        planRevision: Int?
     ) async throws
     func deleteEntry(id: UUID) async throws
     func progress(for date: Date, dailyGoal: Double) async throws -> DailyHydrationProgress
@@ -22,10 +29,15 @@ protocol HydrationTrackingServiceProtocol {
 final class HydrationTrackingService: HydrationTrackingServiceProtocol {
     private let repository: any HydrationRepository
     private let calendar: Calendar
+    private weak var entriesChangeObserver: (any HydrationEntriesChangeObserving)?
 
     init(repository: any HydrationRepository, calendar: Calendar = .autoupdatingCurrent) {
         self.repository = repository
         self.calendar = calendar
+    }
+
+    func setEntriesChangeObserver(_ observer: (any HydrationEntriesChangeObserving)?) {
+        entriesChangeObserver = observer
     }
 
     func entries(for date: Date) async throws -> [HydrationEntry] {
@@ -86,7 +98,9 @@ final class HydrationTrackingService: HydrationTrackingServiceProtocol {
     func addWater(
         amountInMilliliters: Double,
         date: Date,
-        source: HydrationEntrySource
+        source: HydrationEntrySource,
+        planMomentID: UUID? = nil,
+        planRevision: Int? = nil
     ) async throws {
         guard amountInMilliliters.isFinite, amountInMilliliters > 0 else {
             throw HydrationError.invalidAmount
@@ -95,16 +109,42 @@ final class HydrationTrackingService: HydrationTrackingServiceProtocol {
         let entry = HydrationEntry(
             amountInMilliliters: amountInMilliliters,
             date: date,
-            source: source
+            source: source,
+            planMomentID: planMomentID,
+            planRevision: planRevision
         )
         try await repository.add(entry)
+        // Completing a recommendation already has an exact target and is reconciled by
+        // AdaptivePlanService. Free-form entries synchronize the three period goals.
+        if source != .plan {
+            await entriesChangeObserver?.hydrationEntriesDidChange()
+        }
+        NotificationCenter.default.post(name: .hydrationEntriesDidChange, object: nil)
     }
 
     func deleteEntry(id: UUID) async throws {
         try await repository.deleteEntry(id: id)
+        await entriesChangeObserver?.hydrationEntriesDidChange()
+        NotificationCenter.default.post(name: .hydrationEntriesDidChange, object: nil)
     }
 
     func progress(for date: Date, dailyGoal: Double) async throws -> DailyHydrationProgress {
         try await summary(for: date, dailyGoal: dailyGoal).progress
+    }
+}
+
+extension HydrationTrackingServiceProtocol {
+    func addWater(
+        amountInMilliliters: Double,
+        date: Date,
+        source: HydrationEntrySource
+    ) async throws {
+        try await addWater(
+            amountInMilliliters: amountInMilliliters,
+            date: date,
+            source: source,
+            planMomentID: nil,
+            planRevision: nil
+        )
     }
 }

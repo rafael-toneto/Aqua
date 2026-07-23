@@ -6,4 +6,5 @@ enum HydrationEntrySource: String, Codable, CaseIterable, Sendable {
     case widget
     case healthKit
     case foundationModelTool
+    case plan
 }

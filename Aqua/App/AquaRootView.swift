@@ -7,6 +7,7 @@ struct AquaRootView: View {
     let goalService: any HydrationGoalServiceProtocol
     let quickAddAmountsService: any QuickAddAmountsServiceProtocol
     let dateProvider: any DateProviding
+    let adaptivePlanService: AdaptivePlanService
 
     var body: some View {
         TabView {
@@ -27,6 +28,16 @@ struct AquaRootView: View {
             )
             .tabItem {
                 Label("History", systemImage: "chart.bar.fill")
+            }
+
+            PlanView(
+                adaptivePlanService: adaptivePlanService,
+                goalService: goalService,
+                trackingService: trackingService,
+                dateProvider: dateProvider
+            )
+            .tabItem {
+                Label("Plan", systemImage: "list.bullet.clipboard")
             }
 
             SettingsView(
