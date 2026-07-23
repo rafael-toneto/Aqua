@@ -7,17 +7,23 @@ final class SwiftDataHydrationEntry {
     var amountInMilliliters: Double
     var date: Date
     var sourceRawValue: String
+    var planMomentID: UUID?
+    var planRevision: Int?
 
     init(
         id: UUID,
         amountInMilliliters: Double,
         date: Date,
-        sourceRawValue: String
+        sourceRawValue: String,
+        planMomentID: UUID? = nil,
+        planRevision: Int? = nil
     ) {
         self.id = id
         self.amountInMilliliters = amountInMilliliters
         self.date = date
         self.sourceRawValue = sourceRawValue
+        self.planMomentID = planMomentID
+        self.planRevision = planRevision
     }
 
     convenience init(entry: HydrationEntry) {
@@ -25,7 +31,9 @@ final class SwiftDataHydrationEntry {
             id: entry.id,
             amountInMilliliters: entry.amountInMilliliters,
             date: entry.date,
-            sourceRawValue: entry.source.rawValue
+            sourceRawValue: entry.source.rawValue,
+            planMomentID: entry.planMomentID,
+            planRevision: entry.planRevision
         )
     }
 
@@ -34,7 +42,9 @@ final class SwiftDataHydrationEntry {
             id: id,
             amountInMilliliters: amountInMilliliters,
             date: date,
-            source: HydrationEntrySource(rawValue: sourceRawValue) ?? .manual
+            source: HydrationEntrySource(rawValue: sourceRawValue) ?? .manual,
+            planMomentID: planMomentID,
+            planRevision: planRevision
         )
     }
 }
