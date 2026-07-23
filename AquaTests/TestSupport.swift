@@ -111,6 +111,54 @@ final class MockAdaptivePlanGenerator: AdaptivePlanGenerating, @unchecked Sendab
 }
 
 @MainActor
+final class MockHydrationInsightsGenerator: HydrationInsightsGenerating, @unchecked Sendable {
+    var callCount = 0
+    var result: Result<[HydrationInsight], Error>
+    var delay: Duration?
+
+    init(result: Result<[HydrationInsight], Error>) {
+        self.result = result
+    }
+
+    func generateInsights(
+        from snapshot: HydrationInsightsSnapshot
+    ) async throws -> [HydrationInsight] {
+        callCount += 1
+        if let delay { try await Task.sleep(for: delay) }
+        return try result.get()
+    }
+}
+
+struct ValidHydrationInsightsGenerator: HydrationInsightsGenerating {
+    func generateInsights(
+        from snapshot: HydrationInsightsSnapshot
+    ) async throws -> [HydrationInsight] {
+        let definitions: [(
+            category: HydrationInsightCategory,
+            metric: HydrationInsightEvidenceMetric,
+            title: String
+        )] = [
+            (.consistency, .daysWithoutEntries, "Build a steady rhythm"),
+            (.timing, .firstEntryTime, "Anchor the first entry"),
+            (.goalProgress, .goalAchievement, "Keep goal progress visible")
+        ]
+
+        return definitions.map { definition in
+            HydrationInsight(
+                id: "\(definition.category.rawValue).\(definition.metric.rawValue)",
+                title: definition.title,
+                description: "This pattern is based on recent aggregate history.",
+                evidence: snapshot.evidence(for: definition.metric),
+                evidenceMetric: definition.metric,
+                suggestedAction: "Use the existing plan as a practical cue.",
+                category: definition.category,
+                priority: .medium
+            )
+        }
+    }
+}
+
+@MainActor
 final class MutableDateProvider: DateProviding {
     var now: Date
 

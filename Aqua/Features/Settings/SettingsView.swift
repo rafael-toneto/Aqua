@@ -123,12 +123,11 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    comingLaterRow("Intelligent insights", systemImage: "sparkles")
                     comingLaterRow("HealthKit", systemImage: "heart.fill")
                 } header: {
                     Text("Coming Later")
                 } footer: {
-                    Text("These features are informational only and are not active in this version.")
+                    Text("This feature is informational only and is not active in this version.")
                 }
             }
             .listStyle(.insetGrouped)
