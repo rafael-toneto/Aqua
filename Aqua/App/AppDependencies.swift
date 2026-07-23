@@ -15,6 +15,8 @@ final class AppDependencies {
     let dateProvider: any DateProviding
     let hydrationIntentHandler: any HydrationIntentHandling
     let adaptivePlanService: AdaptivePlanService
+    let hydrationInsightsGenerator: any HydrationInsightsGenerating
+    let hydrationInsightsService: HydrationInsightsService
     let planningPreferencesStore: any PlanningPreferencesStoring
     private let dynamicPlanSynchronizer: DynamicPlanSynchronizer
 
@@ -33,6 +35,7 @@ final class AppDependencies {
         let hydrationTrackingService = HydrationTrackingService(repository: repository)
         let hydrationGoalService = HydrationGoalService(preferencesStore: preferencesStore)
         let dateProvider = SystemDateProvider()
+        let insightsGenerator = FoundationModelsInsightsGenerator()
 
         let adaptivePlanService = AdaptivePlanService(
             trackingService: hydrationTrackingService,
@@ -41,6 +44,11 @@ final class AppDependencies {
             repository: planRepository,
             adaptiveGenerator: FoundationModelsAdaptivePlanGenerator(),
             fallbackGenerator: DeterministicAdaptivePlanGenerator()
+        )
+        let insightsService = HydrationInsightsService(
+            trackingService: hydrationTrackingService,
+            goalService: hydrationGoalService,
+            generator: insightsGenerator
         )
         let dynamicPlanSynchronizer = DynamicPlanSynchronizer(
             planService: adaptivePlanService,
@@ -56,6 +64,8 @@ final class AppDependencies {
         self.dateProvider = dateProvider
         self.planningPreferencesStore = planningPreferencesStore
         self.adaptivePlanService = adaptivePlanService
+        hydrationInsightsGenerator = insightsGenerator
+        hydrationInsightsService = insightsService
         self.dynamicPlanSynchronizer = dynamicPlanSynchronizer
         hydrationIntentHandler = HydrationIntentHandler(
             trackingService: hydrationTrackingService,
