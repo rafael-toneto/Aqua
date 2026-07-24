@@ -93,17 +93,11 @@ final class AdaptivePlanService {
                     entries: context.todayEntries,
                     now: now
                 )
-                let synchronizedPlan = synchronizePeriodTargets(
-                    in: result.plan,
-                    entries: context.todayEntries,
-                    preferences: preferences,
-                    now: now
-                )
                 try ensureLatestPreparation(preparationID)
-                if result.didChange || synchronizedPlan != result.plan {
-                    try repository.save(synchronizedPlan)
+                if result.didChange {
+                    try repository.save(result.plan)
                 }
-                return .completed(synchronizedPlan)
+                return .completed(result.plan)
             }
             let plan = periodOnlyPlan(
                 context: context,
@@ -134,17 +128,11 @@ final class AdaptivePlanService {
                     entries: context.todayEntries,
                     now: now
                 )
-                let synchronizedPlan = synchronizePeriodTargets(
-                    in: reconciliation.plan,
-                    entries: context.todayEntries,
-                    preferences: preferences,
-                    now: now
-                )
                 try ensureLatestPreparation(preparationID)
-                if reconciliation.didChange || synchronizedPlan != reconciliation.plan {
-                    try repository.save(synchronizedPlan)
+                if reconciliation.didChange {
+                    try repository.save(reconciliation.plan)
                 }
-                return .outsideActiveHours(synchronizedPlan)
+                return .outsideActiveHours(reconciliation.plan)
             }
             let plan = periodOnlyPlan(
                 context: context,
@@ -157,28 +145,20 @@ final class AdaptivePlanService {
         }
 
         var reconciledPlan: DailyHydrationPlan?
-        var shouldRedistribute = false
         if let storedPlan {
             let reconciliation = reconciler.reconcile(
                 plan: storedPlan,
                 entries: context.todayEntries,
                 now: now
             )
-            let synchronizedPlan = synchronizePeriodTargets(
-                in: reconciliation.plan,
-                entries: context.todayEntries,
-                preferences: preferences,
-                now: now
-            )
-            reconciledPlan = synchronizedPlan
-            shouldRedistribute = reconciliation.needsRedistribution
+            reconciledPlan = reconciliation.plan
 
             if !allowsAdaptiveRegeneration {
                 try ensureLatestPreparation(preparationID)
-                if reconciliation.didChange || synchronizedPlan != reconciliation.plan {
-                    try repository.save(synchronizedPlan)
+                if reconciliation.didChange {
+                    try repository.save(reconciliation.plan)
                 }
-                return .plan(synchronizedPlan)
+                return .plan(reconciliation.plan)
             }
 
             let goalChanged = reconciliation.plan.goalMilliliters != context.dailyGoalMilliliters
@@ -186,10 +166,10 @@ final class AdaptivePlanService {
             if !forceRegeneration
                 && !goalChanged {
                 try ensureLatestPreparation(preparationID)
-                if reconciliation.didChange || synchronizedPlan != reconciliation.plan {
-                    try repository.save(synchronizedPlan)
+                if reconciliation.didChange {
+                    try repository.save(reconciliation.plan)
                 }
-                return .plan(synchronizedPlan)
+                return .plan(reconciliation.plan)
             }
         }
 
@@ -202,7 +182,11 @@ final class AdaptivePlanService {
             existingPlan: reconciledPlan
         )
         let constraints = DailyPlanConstraints.make(from: context)
-        let generated = try await generateValidatedDraft(context: context, constraints: constraints)
+        let generated = try await generateValidatedDraft(
+            context: context,
+            preferences: preferences,
+            constraints: constraints
+        )
         try Task.checkCancellation()
         try ensureLatestPreparation(preparationID)
 
@@ -214,7 +198,6 @@ final class AdaptivePlanService {
         } ?? []
         let generatedReason = resolvedReason(
             reconciledPlan: reconciledPlan,
-            shouldRedistribute: shouldRedistribute,
             now: now
         )
         let newMoments = generated.draft.moments.enumerated().map { index, draftMoment in
@@ -287,10 +270,15 @@ final class AdaptivePlanService {
 
     private func generateValidatedDraft(
         context: DailyPlanContext,
+        preferences: PlanningPreferences,
         constraints: DailyPlanConstraints
     ) async throws -> (draft: GeneratedDailyPlanDraft, source: PlanGenerationSource, wasNormalized: Bool) {
         do {
-            let draft = try await adaptiveGenerator.generatePlan(from: context, constraints: constraints)
+            let draft = try await adaptiveGenerator.generatePlan(
+                from: context,
+                preferences: preferences,
+                constraints: constraints
+            )
             if validator.validate(draft: draft, context: context, constraints: constraints).isValid {
                 return (draft, .foundationModels, false)
             }
@@ -308,7 +296,11 @@ final class AdaptivePlanService {
         }
 
         do {
-            let fallback = try await fallbackGenerator.generatePlan(from: context, constraints: constraints)
+            let fallback = try await fallbackGenerator.generatePlan(
+                from: context,
+                preferences: preferences,
+                constraints: constraints
+            )
             if validator.validate(draft: fallback, context: context, constraints: constraints).isValid {
                 return (fallback, .deterministicFallback, false)
             }
@@ -320,15 +312,9 @@ final class AdaptivePlanService {
 
     private func resolvedReason(
         reconciledPlan: DailyHydrationPlan?,
-        shouldRedistribute: Bool,
         now: Date
     ) -> PlanMomentReason {
         if reconciledPlan == nil { return .initialDistribution }
-        if shouldRedistribute {
-            return reconciledPlan?.moments.contains(where: { $0.status == .partiallyCompleted }) == true
-                ? .partialCompletionRedistribution
-                : .missedMomentRedistribution
-        }
         if calendar.component(.hour, from: now) >= 18 { return .lateDayAdjustment }
         return .remainingGoal
     }
@@ -341,7 +327,7 @@ final class AdaptivePlanService {
 
     private func safeExplanation(_ text: String, momentCount: Int, isAdjustment: Bool) -> String {
         let fallback = isAdjustment
-            ? "Your remaining goal was redistributed across the rest of today."
+            ? "Your remaining goal was updated across the rest of today."
             : "Your remaining goal was divided across the rest of your active day."
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 220, !containsMedicalClaim(trimmed) else {
@@ -361,38 +347,6 @@ final class AdaptivePlanService {
         let lowered = text.lowercased()
         return ["medical", "clinically", "optimal for your body", "healthy", "expert-recommended"]
             .contains(where: lowered.contains)
-    }
-
-    private func synchronizePeriodTargets(
-        in plan: DailyHydrationPlan,
-        entries: [HydrationEntrySnapshot],
-        preferences: PlanningPreferences,
-        now: Date
-    ) -> DailyHydrationPlan {
-        var updatedPlan = plan
-        let currentMoments = plan.moments.filter {
-            $0.generatedRevision == plan.revision && $0.status != .cancelled
-        }
-        let targets = plan.periodTargets ?? periodPlanner.initialTargets(
-            goalMilliliters: plan.goalMilliliters,
-            entries: entries,
-            moments: currentMoments,
-            preferences: preferences
-        )
-        updatedPlan.periodTargets = periodPlanner.synchronizedTargets(
-            targets,
-            entries: entries,
-            goalMilliliters: plan.goalMilliliters,
-            now: now,
-            automaticRedistributionEnabled: preferences.automaticRedistributionEnabled
-        )
-        let periodAdjustmentSummary = "Later period goals were updated to keep today’s daily goal on track."
-        if updatedPlan.periodTargets?.contains(where: \.wasAdjusted) == true {
-            updatedPlan.adjustmentSummary = periodAdjustmentSummary
-        } else if updatedPlan.adjustmentSummary == periodAdjustmentSummary {
-            updatedPlan.adjustmentSummary = nil
-        }
-        return updatedPlan
     }
 
     private func periodOnlyPlan(

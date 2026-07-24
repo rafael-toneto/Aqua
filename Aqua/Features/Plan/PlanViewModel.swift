@@ -78,10 +78,6 @@ struct PlanViewData: Equatable {
         !periods.isEmpty
     }
 
-    var hasRedistributedPeriods: Bool {
-        plan?.periodTargets?.contains(where: \.wasAdjusted) == true
-    }
-
     var completedPeriodCount: Int {
         periods.filter(\.isComplete).count
     }
@@ -99,6 +95,13 @@ enum PlanPeriodProgressState: Equatable {
     case current
     case upcoming
     case missed
+}
+
+enum PlanCheckpointProgressState: Equatable {
+    case completed
+    case missed
+    case next
+    case upcoming
 }
 
 struct PlanCheckpointViewData: Identifiable, Equatable {
@@ -222,14 +225,10 @@ struct PlanCheckpointPlanner {
             ),
             1
         )
-        let amountBasedPeriodCount = ceilingDivision(target, by: preferredAmount)
-        let requestedCount = preferences.mayAddMoments
-            ? max(proportionalCount, amountBasedPeriodCount)
-            : proportionalCount
         let minimumInterval = max(preferences.minimumIntervalMinutes, 1)
         let maximumByInterval = ((overlapMinutes - 1) / minimumInterval) + 1
         let count = min(
-            max(requestedCount, 1),
+            proportionalCount,
             max(maximumByInterval, 1),
             24,
             target
@@ -271,12 +270,18 @@ struct PlanPeriodViewData: Identifiable, Equatable {
     let plannedMilliliters: Int
     let consumedMilliliters: Int
     let checkpoints: [PlanCheckpointViewData]
+    let checkpointStates: [PlanCheckpointProgressState]
     let state: PlanPeriodProgressState
 
     var id: HydrationDayPeriod { period }
     var isComplete: Bool { state == .completed }
     var completedCheckpointCount: Int {
-        checkpoints.filter { consumedMilliliters >= $0.cumulativeMilliliters }.count
+        checkpointStates.filter { $0 == .completed }.count
+    }
+
+    func checkpointState(at index: Int) -> PlanCheckpointProgressState {
+        guard checkpointStates.indices.contains(index) else { return .upcoming }
+        return checkpointStates[index]
     }
 
     init(
@@ -298,6 +303,11 @@ struct PlanPeriodViewData: Identifiable, Equatable {
         }
         self.plannedMilliliters = safePlanned
         consumedMilliliters = consumed
+        checkpointStates = Self.checkpointStates(
+            for: checkpoints,
+            consumedMilliliters: consumed,
+            now: now
+        )
 
         if consumed >= safePlanned {
             state = .completed
@@ -308,6 +318,27 @@ struct PlanPeriodViewData: Identifiable, Equatable {
         } else {
             state = .upcoming
         }
+    }
+
+    private static func checkpointStates(
+        for checkpoints: [PlanCheckpointViewData],
+        consumedMilliliters: Int,
+        now: Date
+    ) -> [PlanCheckpointProgressState] {
+        var states = checkpoints.map { checkpoint in
+            if consumedMilliliters >= checkpoint.cumulativeMilliliters {
+                return PlanCheckpointProgressState.completed
+            }
+            if now >= checkpoint.scheduledDate {
+                return PlanCheckpointProgressState.missed
+            }
+            return PlanCheckpointProgressState.upcoming
+        }
+
+        if let nextIndex = states.firstIndex(of: .upcoming) {
+            states[nextIndex] = .next
+        }
+        return states
     }
 
     private static func safeIntegerMilliliters(_ amount: Double) -> Int {
@@ -532,8 +563,13 @@ final class PlanViewModel: ObservableObject {
     private func scheduleNextBoundaryRefresh() {
         boundaryTask?.cancel()
         let now = dateProvider.now
-        guard let nextBoundary = HydrationDayPeriod.allCases
-            .map({ $0.endDate(on: now, calendar: Calendar.autoupdatingCurrent) })
+        let periodBoundaries = HydrationDayPeriod.allCases.map {
+            $0.endDate(on: now, calendar: Calendar.autoupdatingCurrent)
+        }
+        let checkpointBoundaries = state.data?.periods.flatMap { period in
+            period.checkpoints.map(\.scheduledDate)
+        } ?? []
+        guard let nextBoundary = (periodBoundaries + checkpointBoundaries)
             .filter({ $0 > now })
             .min() else { return }
 

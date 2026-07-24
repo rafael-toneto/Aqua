@@ -28,8 +28,12 @@ private struct FoundationGeneratedPlanMoment {
 struct FoundationModelsAdaptivePlanGenerator: AdaptivePlanGenerating {
     func generatePlan(
         from context: DailyPlanContext,
+        preferences: PlanningPreferences,
         constraints: DailyPlanConstraints
     ) async throws -> GeneratedDailyPlanDraft {
+        guard preferences.isValid, context.reflects(preferences) else {
+            throw PlanGenerationError.invalidFallback
+        }
         let model = SystemLanguageModel.default
         guard case .available = model.availability else {
             throw PlanGenerationError.unavailable
@@ -43,12 +47,17 @@ struct FoundationModelsAdaptivePlanGenerator: AdaptivePlanGenerating {
             Use only future relative minutes within the supplied active window.
             Do not encourage exceeding the remaining amount.
             Return only the requested structured result.
-            Prefer practical, reasonably even spacing and avoid concentrating everything at day end.
-            Add moments only when the supplied context permits it.
+            The user preferences supplied with each request are authoritative. Never replace them
+            with defaults or silently ignore them. Follow the required distribution profile, which
+            resolves the user's preferred count and amount against the remaining goal and time.
             """)
 
         let response = try await session.respond(
-            to: prompt(context: context, constraints: constraints),
+            to: prompt(
+                context: context,
+                preferences: preferences,
+                constraints: constraints
+            ),
             generating: FoundationGeneratedDailyPlanDraft.self,
             options: GenerationOptions(sampling: .greedy, maximumResponseTokens: 1_200)
         )
@@ -65,7 +74,11 @@ struct FoundationModelsAdaptivePlanGenerator: AdaptivePlanGenerating {
         )
     }
 
-    private func prompt(context: DailyPlanContext, constraints: DailyPlanConstraints) -> String {
+    func prompt(
+        context: DailyPlanContext,
+        preferences: PlanningPreferences,
+        constraints: DailyPlanConstraints
+    ) -> String {
         let existingMomentCount = context.existingPlan?.moments.filter {
             $0.generatedRevision == context.existingPlan?.revision
         }.count ?? 0
@@ -79,6 +92,15 @@ struct FoundationModelsAdaptivePlanGenerator: AdaptivePlanGenerating {
         )
         return """
             Create the remaining portion of a whole-day schedule using these exact facts and constraints:
+
+            USER SETTINGS — mandatory inputs; do not infer or substitute defaults:
+            - Active day starts at minute \(preferences.activeDayStartMinutes) after midnight
+            - Active day ends at minute \(preferences.activeDayEndMinutes) after midnight
+            - Preferred total moment count: \(preferences.preferredMomentCount)
+            - Preferred amount per moment: \(preferences.preferredAmountMilliliters) ml
+            - Minimum interval between moments: \(preferences.minimumIntervalMinutes) minutes
+
+            DERIVED STATE — calculated by the app from those exact user settings:
             - User-selected daily goal: \(context.dailyGoalMilliliters) ml
             - Already consumed: \(context.consumedMilliliters) ml
             - Exact amount still to organize: \(context.remainingMilliliters) ml
@@ -87,18 +109,14 @@ struct FoundationModelsAdaptivePlanGenerator: AdaptivePlanGenerating {
             - Cadence-adjusted planning start is active-day minute: \(planningStartMinute)
             - In the output, that planning start is minute 0
             - Active minutes remaining after planning start: \(context.remainingActiveMinutes)
-            - Preferred total moment count for the whole day: \(context.preferredMomentCount)
             - Logged moments so far: \(context.todayEntries.count)
             - Cadence-adjusted preferred remaining moments: \(context.preferredRemainingMomentCount)
-            - Preferred amount: \(context.preferredAmountMilliliters) ml
             - Minimum interval: \(constraints.minimumIntervalMinutes) minutes
             - Maximum moments: \(constraints.maximumMomentCount)
             - Application guardrail per moment: \(constraints.maximumMomentMilliliters) ml
             - Existing current-revision moments: \(existingMomentCount)
             - Missed moments: \(context.missedMoments.count)
             - Partially completed moments: \(context.partiallyCompletedMoments.count)
-            - Automatic missed-moment redistribution: \(context.automaticRedistributionEnabled)
-            - May add moments: \(context.mayAddMoments)
 
             Hydration already logged today (times are minutes from active-day start):
             \(hydrationHistory(context))
@@ -112,12 +130,14 @@ struct FoundationModelsAdaptivePlanGenerator: AdaptivePlanGenerating {
             \(context.remainingMilliliters) ml. The explanation may describe only this validated
             distribution and must not make health or medical claims. Treat logged events as already
             completed moments and never recreate them. Plan the rest as a continuation of the whole
-            active day. Use the user's total moment count, preferred amount, interval, prior drinking
-            times, and remaining window as joint scheduling signals. Do not bias the first result
-            toward the current time merely because it is the first output item; use the day-wide
-            cadence and spread useful moments through the remaining window.
+            active day. Apply every user setting above: the active-day bounds and minimum interval
+            are hard constraints; the required distribution profile is the app's exact resolution
+            of the preferred moment count and amount when they cannot both be met exactly. Do not
+            bias the first result toward the current time merely because it is the first output item;
+            use the configured day-wide cadence and spread useful moments through the remaining
+            window.
 
-            Required distribution profile:
+            REQUIRED OUTPUT PROFILE — derived from the supplied user settings and mandatory:
             \(distributionProfile(context: context, constraints: constraints))
 
             Follow the required count and milliliter total for every period exactly. Keep individual

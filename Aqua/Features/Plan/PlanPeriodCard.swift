@@ -239,15 +239,15 @@ private struct PlanCheckpointTimeline: View {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(data.checkpoints.enumerated()), id: \.element.id) { index, checkpoint in
                     let progress = progressTowardCheckpoint(at: index)
-                    let isDone = progress >= 1
-                    let isNext = !isDone && index == data.completedCheckpointCount
+                    let state = data.checkpointState(at: index)
 
                     HStack(alignment: .top, spacing: AquaSpacing.medium) {
                         CheckpointProgressMarker(
                             progress: progress,
                             connectorProgress: connectorProgress(after: index),
                             showsConnector: index < data.checkpoints.count - 1,
-                            accentColor: accentColor
+                            accentColor: accentColor,
+                            state: state
                         )
 
                         VStack(alignment: .leading, spacing: AquaSpacing.extraSmall) {
@@ -255,7 +255,7 @@ private struct PlanCheckpointTimeline: View {
                                 Text(checkpoint.scheduledDate.formatted(date: .omitted, time: .shortened))
                                     .font(.subheadline.weight(.semibold))
                                 Spacer()
-                                checkpointStatus(isDone: isDone, isNext: isNext)
+                                checkpointStatus(state: state)
                             }
 
                             Text(formatted(checkpoint.cumulativeMilliliters))
@@ -272,25 +272,49 @@ private struct PlanCheckpointTimeline: View {
                         "Checkpoint at \(checkpoint.scheduledDate.formatted(date: .omitted, time: .shortened)), "
                             + "\(formatted(checkpoint.cumulativeMilliliters)) total"
                     )
-                    .accessibilityValue(accessibilityValue(progress: progress, isNext: isNext))
+                    .accessibilityValue(accessibilityValue(progress: progress, state: state))
                 }
             }
         }
     }
 
-    private func checkpointStatus(isDone: Bool, isNext: Bool) -> some View {
-        Label(
-            isDone ? "Done" : (isNext ? "Next" : "Upcoming"),
-            systemImage: isDone ? "checkmark" : (isNext ? "drop.fill" : "clock")
-        )
+    private func checkpointStatus(state: PlanCheckpointProgressState) -> some View {
+        Label(checkpointStatusTitle(for: state), systemImage: checkpointStatusIcon(for: state))
         .font(.caption.weight(.semibold))
-        .foregroundStyle(isDone ? .green : (isNext ? accentColor : .secondary))
+        .foregroundStyle(checkpointStatusColor(for: state))
         .padding(.horizontal, AquaSpacing.small)
         .padding(.vertical, AquaSpacing.extraSmall)
         .background(
-            (isDone ? Color.green : (isNext ? accentColor : Color.secondary)).opacity(0.12),
+            checkpointStatusColor(for: state).opacity(0.12),
             in: Capsule()
         )
+    }
+
+    private func checkpointStatusTitle(for state: PlanCheckpointProgressState) -> String {
+        switch state {
+        case .completed: "Done"
+        case .missed: "Missed"
+        case .next: "Next"
+        case .upcoming: "Upcoming"
+        }
+    }
+
+    private func checkpointStatusIcon(for state: PlanCheckpointProgressState) -> String {
+        switch state {
+        case .completed: "checkmark"
+        case .missed: "exclamationmark"
+        case .next: "drop.fill"
+        case .upcoming: "clock"
+        }
+    }
+
+    private func checkpointStatusColor(for state: PlanCheckpointProgressState) -> Color {
+        switch state {
+        case .completed: .green
+        case .missed: .red
+        case .next: accentColor
+        case .upcoming: .secondary
+        }
     }
 
     private func progressTowardCheckpoint(at index: Int) -> Double {
@@ -309,10 +333,21 @@ private struct PlanCheckpointTimeline: View {
         return progressTowardCheckpoint(at: index + 1)
     }
 
-    private func accessibilityValue(progress: Double, isNext: Bool) -> String {
-        if progress >= 1 { return "Done" }
+    private func accessibilityValue(
+        progress: Double,
+        state: PlanCheckpointProgressState
+    ) -> String {
         let percentage = Int((progress * 100).rounded())
-        return isNext ? "Next checkpoint, \(percentage) percent complete" : "Upcoming"
+        switch state {
+        case .completed:
+            return "Done"
+        case .missed:
+            return "Missed checkpoint, \(percentage) percent complete"
+        case .next:
+            return "Next checkpoint, \(percentage) percent complete"
+        case .upcoming:
+            return "Upcoming"
+        }
     }
 
     private func formatted(_ amount: Int) -> String {
@@ -325,27 +360,28 @@ private struct CheckpointProgressMarker: View {
     let connectorProgress: Double
     let showsConnector: Bool
     let accentColor: Color
+    let state: PlanCheckpointProgressState
 
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
                 Circle()
-                    .fill(progress >= 1 ? Color.green : Color(uiColor: .tertiarySystemFill))
+                    .fill(markerBackgroundColor)
 
                 if progress > 0, progress < 1 {
                     Circle()
                         .trim(from: 0, to: progress)
                         .stroke(
-                            accentColor,
+                            markerForegroundColor,
                             style: StrokeStyle(lineWidth: 3, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
                         .padding(2)
                 }
 
-                Image(systemName: progress >= 1 ? "checkmark" : "drop.fill")
+                Image(systemName: markerIcon)
                     .font(.caption.bold())
-                    .foregroundStyle(progress >= 1 ? .white : accentColor)
+                    .foregroundStyle(markerForegroundColor)
             }
             .frame(width: 28, height: 28)
 
@@ -361,5 +397,29 @@ private struct CheckpointProgressMarker: View {
             }
         }
         .accessibilityHidden(true)
+    }
+
+    private var markerBackgroundColor: Color {
+        switch state {
+        case .completed: .green
+        case .missed: .red.opacity(0.12)
+        case .next, .upcoming: Color(uiColor: .tertiarySystemFill)
+        }
+    }
+
+    private var markerForegroundColor: Color {
+        switch state {
+        case .completed: .white
+        case .missed: .red
+        case .next, .upcoming: accentColor
+        }
+    }
+
+    private var markerIcon: String {
+        switch state {
+        case .completed: "checkmark"
+        case .missed: "exclamationmark"
+        case .next, .upcoming: "drop.fill"
+        }
     }
 }

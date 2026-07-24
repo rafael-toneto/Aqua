@@ -93,6 +93,7 @@ final class InMemoryDailyPlanRepository: DailyPlanRepository {
 @MainActor
 final class MockAdaptivePlanGenerator: AdaptivePlanGenerating, @unchecked Sendable {
     var callCount = 0
+    var receivedPreferences: [PlanningPreferences] = []
     var result: Result<GeneratedDailyPlanDraft, Error>
     var delay: Duration?
 
@@ -102,9 +103,11 @@ final class MockAdaptivePlanGenerator: AdaptivePlanGenerating, @unchecked Sendab
 
     func generatePlan(
         from context: DailyPlanContext,
+        preferences: PlanningPreferences,
         constraints: DailyPlanConstraints
     ) async throws -> GeneratedDailyPlanDraft {
         callCount += 1
+        receivedPreferences.append(preferences)
         if let delay { try await Task.sleep(for: delay) }
         return try result.get()
     }

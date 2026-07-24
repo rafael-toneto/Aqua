@@ -13,10 +13,10 @@ enum HydrationPlanMomentStatus: String, Codable, Sendable, CaseIterable {
 enum PlanMomentReason: String, Codable, Sendable {
     case initialDistribution
     case remainingGoal
-    case missedMomentRedistribution
-    case partialCompletionRedistribution
     case lateDayAdjustment
     // Retained only so plans created by older builds remain decodable.
+    case missedMomentRedistribution
+    case partialCompletionRedistribution
     case manuallyRegenerated
 }
 
@@ -92,17 +92,13 @@ struct PlanningPreferences: Codable, Sendable, Equatable {
     var preferredMomentCount: Int
     var minimumIntervalMinutes: Int
     var preferredAmountMilliliters: Int
-    var automaticRedistributionEnabled: Bool
-    var mayAddMoments: Bool
 
     nonisolated static let defaults = PlanningPreferences(
         activeDayStartMinutes: 8 * 60,
         activeDayEndMinutes: 22 * 60,
         preferredMomentCount: 6,
         minimumIntervalMinutes: 60,
-        preferredAmountMilliliters: 400,
-        automaticRedistributionEnabled: true,
-        mayAddMoments: true
+        preferredAmountMilliliters: 400
     )
 
     func requiresPlanRegeneration(comparedTo previous: PlanningPreferences) -> Bool {
@@ -111,8 +107,6 @@ struct PlanningPreferences: Codable, Sendable, Equatable {
             || preferredMomentCount != previous.preferredMomentCount
             || minimumIntervalMinutes != previous.minimumIntervalMinutes
             || preferredAmountMilliliters != previous.preferredAmountMilliliters
-            || automaticRedistributionEnabled != previous.automaticRedistributionEnabled
-            || mayAddMoments != previous.mayAddMoments
     }
 
     var isValid: Bool {
@@ -144,8 +138,6 @@ struct DailyPlanContext: Sendable {
     let todayEntries: [HydrationEntrySnapshot]
     let missedMoments: [HydrationPlanMoment]
     let partiallyCompletedMoments: [HydrationPlanMoment]
-    let automaticRedistributionEnabled: Bool
-    let mayAddMoments: Bool
     let gracePeriodMinutes: Int
 
     var isWithinActiveHours: Bool {

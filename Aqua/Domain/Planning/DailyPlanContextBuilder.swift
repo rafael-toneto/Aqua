@@ -77,8 +77,6 @@ struct DailyPlanContextBuilder: Sendable {
             partiallyCompletedMoments: existingPlan?.moments.filter {
                 $0.status == .partiallyCompleted
             } ?? [],
-            automaticRedistributionEnabled: preferences.automaticRedistributionEnabled,
-            mayAddMoments: preferences.mayAddMoments,
             gracePeriodMinutes: DailyPlanRules.gracePeriodMinutes
         )
     }

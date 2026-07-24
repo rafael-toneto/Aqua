@@ -15,16 +15,14 @@ final class DailyPlanReconcilerTests: XCTestCase {
     func testMomentIsNotMissedInsideGracePeriod() {
         let result = reconcile(plan: plan(at: 8, amount: 500), nowHour: 8, minute: 20)
         XCTAssertNotEqual(result.plan.moments[0].status, .missed)
-        XCTAssertFalse(result.needsRedistribution)
     }
 
     func testMomentBecomesMissedAfterGracePeriod() {
         let result = reconcile(plan: plan(at: 8, amount: 500), nowHour: 8, minute: 21)
         XCTAssertEqual(result.plan.moments[0].status, .missed)
-        XCTAssertTrue(result.needsRedistribution)
     }
 
-    func testPartialCompletionRedistributesOnlyUnfulfilledAmount() {
+    func testPartialCompletionTracksOnlyUnfulfilledAmount() {
         let entry = HydrationEntry(
             amountInMilliliters: 300,
             date: date(hour: 12, minute: 10),
@@ -39,7 +37,6 @@ final class DailyPlanReconcilerTests: XCTestCase {
         XCTAssertEqual(result.plan.moments[0].completedMilliliters, 300)
         XCTAssertEqual(result.plan.moments[0].remainingMilliliters, 200)
         XCTAssertEqual(result.plan.moments[0].status, .partiallyCompleted)
-        XCTAssertTrue(result.needsRedistribution)
     }
 
     func testCompletedMomentKeepsItsIdentityAndAmount() {
@@ -105,7 +102,6 @@ final class DailyPlanReconcilerTests: XCTestCase {
         )
         let result = reconcile(plan: original, entries: [entry], nowHour: 10)
         XCTAssertEqual(result.plan.moments[0].status, .cancelled)
-        XCTAssertFalse(result.needsRedistribution)
     }
 
     func testStaleActiveMomentFromOlderRevisionIsRemoved() {

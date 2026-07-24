@@ -93,16 +93,7 @@ struct DailyPlanDistributionPolicy: Sendable {
             context.remainingMilliliters,
             by: constraints.maximumMomentMilliliters
         )
-        var requestedCount = max(context.preferredRemainingMomentCount, guardrailBasedCount)
-
-        if context.mayAddMoments {
-            let preferredAmount = max(context.preferredAmountMilliliters, 1)
-            let toleratedAmount = preferredAmount + preferredAmount / 4
-            requestedCount = max(
-                requestedCount,
-                ceilingDivision(context.remainingMilliliters, by: toleratedAmount)
-            )
-        }
+        let requestedCount = max(context.preferredRemainingMomentCount, guardrailBasedCount)
 
         return min(
             max(requestedCount, 1),

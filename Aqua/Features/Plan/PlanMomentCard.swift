@@ -73,7 +73,7 @@ struct PlanMomentCard: View {
         case .partiallyCompleted: "Partly logged"
         case .current: "Now"
         case .upcoming: "Upcoming"
-        case .missed: "Redistributed"
+        case .missed: "Missed"
         case .adjusted: "Adjusted"
         case .cancelled: "Cancelled"
         }
@@ -85,7 +85,7 @@ struct PlanMomentCard: View {
         case .partiallyCompleted: "circle.lefthalf.filled"
         case .current: "drop.fill"
         case .upcoming: "clock"
-        case .missed: "arrow.triangle.2.circlepath"
+        case .missed: "clock.badge.exclamationmark"
         case .adjusted: "slider.horizontal.2.square"
         case .cancelled: "xmark"
         }

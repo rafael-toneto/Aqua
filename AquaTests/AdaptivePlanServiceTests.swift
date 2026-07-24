@@ -37,6 +37,21 @@ final class AdaptivePlanServiceTests: XCTestCase {
         XCTAssertEqual(try setup.planRepository.plan(for: now), plan)
     }
 
+    func testGeneratorReceivesExactUserPreferences() async throws {
+        let setup = makeSetup()
+        var preferences = PlanningPreferences.defaults
+        preferences.activeDayStartMinutes = 9 * 60
+        preferences.activeDayEndMinutes = 21 * 60
+        preferences.preferredMomentCount = 4
+        preferences.minimumIntervalMinutes = 90
+        preferences.preferredAmountMilliliters = 650
+        try setup.service.updatePlanningPreferences(preferences)
+
+        _ = try await setup.service.preparePlan(now: now)
+
+        XCTAssertEqual(setup.adaptiveGenerator.receivedPreferences, [preferences])
+    }
+
     func testExistingConsumptionReducesFuturePlanExactTotal() async throws {
         let entry = HydrationEntry(amountInMilliliters: 1_000, date: now, source: .manual)
         let setup = makeSetup(entries: [entry])
@@ -60,7 +75,7 @@ final class AdaptivePlanServiceTests: XCTestCase {
         XCTAssertTrue(originalMomentIDs.isDisjoint(with: second.moments.map(\.id)))
     }
 
-    func testCompletedPeriodRedistributesTargetsWithoutNewRevision() async throws {
+    func testCompletedPeriodKeepsTargetsWithoutNewRevision() async throws {
         let setup = makeSetup()
         let first = try await loadedPlan(from: setup.service.preparePlan(now: now))
         let later = now.addingTimeInterval(2 * 60 * 60)
@@ -69,7 +84,7 @@ final class AdaptivePlanServiceTests: XCTestCase {
         XCTAssertEqual(revised.revision, first.revision)
         XCTAssertEqual(setup.adaptiveGenerator.callCount, 1)
         XCTAssertTrue(revised.moments.contains { $0.status == .missed })
-        XCTAssertTrue(revised.periodTargets?.contains(where: \.wasAdjusted) == true)
+        XCTAssertFalse(revised.periodTargets?.contains(where: \.wasAdjusted) == true)
     }
 
     func testGoalChangeCreatesNewExactTotalPlan() async throws {
@@ -409,6 +424,7 @@ final class AdaptivePlanServiceTests: XCTestCase {
         )
         return try await DeterministicAdaptivePlanGenerator().generatePlan(
             from: context,
+            preferences: .defaults,
             constraints: .make(from: context)
         )
     }
@@ -420,6 +436,7 @@ private final class DelayedContextualPlanGenerator: AdaptivePlanGenerating, @unc
 
     func generatePlan(
         from context: DailyPlanContext,
+        preferences: PlanningPreferences,
         constraints: DailyPlanConstraints
     ) async throws -> GeneratedDailyPlanDraft {
         callCount += 1

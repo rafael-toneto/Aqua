@@ -18,6 +18,30 @@ final class DailyPlanPersistenceTests: XCTestCase {
         XCTAssertEqual(reopened.preferences, preferences)
     }
 
+    func testLegacyAdjustmentSettingsDoNotPreventPreferencesFromDecoding() throws {
+        let data = try XCTUnwrap(
+            """
+            {
+              "activeDayStartMinutes": 480,
+              "activeDayEndMinutes": 1260,
+              "preferredMomentCount": 5,
+              "minimumIntervalMinutes": 75,
+              "preferredAmountMilliliters": 550,
+              "automaticRedistributionEnabled": true,
+              "mayAddMoments": false
+            }
+            """.data(using: .utf8)
+        )
+
+        let decoded = try JSONDecoder().decode(PlanningPreferences.self, from: data)
+
+        XCTAssertEqual(decoded.activeDayStartMinutes, 480)
+        XCTAssertEqual(decoded.activeDayEndMinutes, 1260)
+        XCTAssertEqual(decoded.preferredMomentCount, 5)
+        XCTAssertEqual(decoded.minimumIntervalMinutes, 75)
+        XCTAssertEqual(decoded.preferredAmountMilliliters, 550)
+    }
+
     func testInvalidPlanningPreferencesAreRejected() {
         var preferences = PlanningPreferences.defaults
         preferences.activeDayEndMinutes = preferences.activeDayStartMinutes

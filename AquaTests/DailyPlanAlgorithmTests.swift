@@ -50,6 +50,28 @@ final class DailyPlanAlgorithmTests: XCTestCase {
         XCTAssertEqual(components.minute, 0)
     }
 
+    func testFoundationPromptIncludesExactUserPreferences() {
+        var preferences = PlanningPreferences.defaults
+        preferences.activeDayStartMinutes = 9 * 60
+        preferences.activeDayEndMinutes = 21 * 60
+        preferences.preferredMomentCount = 4
+        preferences.preferredAmountMilliliters = 650
+        preferences.minimumIntervalMinutes = 90
+        let context = makeContext(goal: 4_000, preferences: preferences)
+
+        let prompt = FoundationModelsAdaptivePlanGenerator().prompt(
+            context: context,
+            preferences: preferences,
+            constraints: .make(from: context)
+        )
+
+        XCTAssertTrue(prompt.contains("Active day starts at minute 540 after midnight"))
+        XCTAssertTrue(prompt.contains("Active day ends at minute 1260 after midnight"))
+        XCTAssertTrue(prompt.contains("Preferred total moment count: 4"))
+        XCTAssertTrue(prompt.contains("Preferred amount per moment: 650 ml"))
+        XCTAssertTrue(prompt.contains("Minimum interval between moments: 90 minutes"))
+    }
+
     func testLoggedWaterCountsAsCompletedWholeDayMoment() {
         let context = makeContext(goal: 4_000, consumed: [250])
 
@@ -88,6 +110,7 @@ final class DailyPlanAlgorithmTests: XCTestCase {
         let context = makeContext(goal: 2_000, consumed: [2_000])
         let draft = try await DeterministicAdaptivePlanGenerator().generatePlan(
             from: context,
+            preferences: .defaults,
             constraints: .make(from: context)
         )
         XCTAssertTrue(draft.moments.isEmpty)
@@ -104,7 +127,7 @@ final class DailyPlanAlgorithmTests: XCTestCase {
         preferences.preferredMomentCount = 3
         preferences.preferredAmountMilliliters = 10_000
         let context = makeContext(goal: 1_001, preferences: preferences)
-        let draft = try await fallback(context)
+        let draft = try await fallback(context, preferences: preferences)
         XCTAssertEqual(draft.moments.map(\.amountMilliliters), [334, 334, 333])
     }
 
@@ -122,7 +145,7 @@ final class DailyPlanAlgorithmTests: XCTestCase {
         preferences.preferredAmountMilliliters = 10_000
         let context = makeContext(goal: 1_000, preferences: preferences)
 
-        let draft = try await fallback(context)
+        let draft = try await fallback(context, preferences: preferences)
 
         XCTAssertEqual(draft.moments.count, 1)
         XCTAssertEqual(draft.moments.first?.minutesFromStart, 0)
@@ -142,7 +165,10 @@ final class DailyPlanAlgorithmTests: XCTestCase {
     func testFallbackRespectsMinimumInterval() async throws {
         var preferences = PlanningPreferences.defaults
         preferences.minimumIntervalMinutes = 90
-        let draft = try await fallback(makeContext(goal: 4_000, preferences: preferences))
+        let draft = try await fallback(
+            makeContext(goal: 4_000, preferences: preferences),
+            preferences: preferences
+        )
         let offsets = draft.moments.map(\.minutesFromStart)
         for pair in zip(offsets, offsets.dropFirst()) {
             XCTAssertGreaterThanOrEqual(pair.1 - pair.0, 90)
@@ -159,10 +185,8 @@ final class DailyPlanAlgorithmTests: XCTestCase {
         preferences.preferredMomentCount = 5
         preferences.minimumIntervalMinutes = 15
         preferences.preferredAmountMilliliters = 300
-        preferences.mayAddMoments = true
-
         let context = makeContext(goal: 5_400, preferences: preferences)
-        let generated = try await fallback(context)
+        let generated = try await fallback(context, preferences: preferences)
         let grouped = momentsByPeriod(generated, context: context)
 
         XCTAssertEqual(generated.moments.count, 18)
@@ -190,7 +214,7 @@ final class DailyPlanAlgorithmTests: XCTestCase {
         preferences.preferredAmountMilliliters = 300
 
         let context = makeContext(goal: 5_400, preferences: preferences)
-        let generated = try await fallback(context)
+        let generated = try await fallback(context, preferences: preferences)
         let grouped = momentsByPeriod(generated, context: context)
 
         XCTAssertFalse(grouped[.morning, default: []].isEmpty)
@@ -317,9 +341,13 @@ final class DailyPlanAlgorithmTests: XCTestCase {
         }
     }
 
-    private func fallback(_ context: DailyPlanContext) async throws -> GeneratedDailyPlanDraft {
+    private func fallback(
+        _ context: DailyPlanContext,
+        preferences: PlanningPreferences = .defaults
+    ) async throws -> GeneratedDailyPlanDraft {
         try await DeterministicAdaptivePlanGenerator().generatePlan(
             from: context,
+            preferences: preferences,
             constraints: .make(from: context)
         )
     }
