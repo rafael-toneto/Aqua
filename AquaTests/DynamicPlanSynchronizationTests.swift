@@ -52,8 +52,6 @@ final class DynamicPlanSynchronizationTests: XCTestCase {
         preferences.preferredMomentCount = 2
         preferences.preferredAmountMilliliters = 10_000
         preferences.minimumIntervalMinutes = 90
-        preferences.automaticRedistributionEnabled = false
-        preferences.mayAddMoments = false
         try setup.service.updatePlanningPreferences(preferences)
 
         setup.dateProvider.now = now.addingTimeInterval(60)
@@ -205,6 +203,7 @@ final class DynamicPlanSynchronizationTests: XCTestCase {
         )
         return try await DeterministicAdaptivePlanGenerator().generatePlan(
             from: context,
+            preferences: .defaults,
             constraints: .make(from: context)
         )
     }

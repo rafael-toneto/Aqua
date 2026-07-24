@@ -110,7 +110,7 @@ struct PlanView: View {
                 PlanHeaderView(data: data, outsideActiveHours: outsideActiveHours)
 
                 if let summary = data.plan?.adjustmentSummary,
-                   data.hasRedistributedPeriods || data.plan?.revision ?? 0 > 0 {
+                   data.plan?.revision ?? 0 > 0 {
                     PlanAdjustmentCard(summary: summary)
                 }
 

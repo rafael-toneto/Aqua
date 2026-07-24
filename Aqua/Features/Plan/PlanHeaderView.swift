@@ -67,7 +67,6 @@ struct PlanHeaderView: View {
 
     private var statusTitle: String {
         if data.progress.hasReachedGoal { return "Goal Completed" }
-        if data.hasRedistributedPeriods { return "Plan Adjusted" }
         if data.periods.contains(where: { $0.state == .missed }) { return "Needs Catch-up" }
         if outsideActiveHours { return "Day Ended" }
         if data.plan == nil { return "No Plan Yet" }
@@ -77,7 +76,6 @@ struct PlanHeaderView: View {
     private var statusIcon: String {
         switch statusTitle {
         case "Goal Completed": "checkmark.circle.fill"
-        case "Plan Adjusted": "arrow.triangle.2.circlepath"
         case "Needs Catch-up": "clock.badge.exclamationmark"
         case "Day Ended": "moon.stars.fill"
         default: "checkmark.circle"

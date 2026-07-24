@@ -60,45 +60,6 @@ final class DailyPlanPeriodTests: XCTestCase {
         XCTAssertEqual(plannedAmounts(generated), [0, 1_001, 0])
     }
 
-    func testMorningShortfallIsSpreadAcrossLaterPeriods() {
-        let updated = planner.synchronizedTargets(
-            targets,
-            entries: [snapshot(amount: 800, hour: 10)],
-            goalMilliliters: 4_000,
-            now: date(hour: 13),
-            automaticRedistributionEnabled: true
-        )
-
-        XCTAssertEqual(plannedAmounts(updated), [1_000, 1_600, 1_600])
-        XCTAssertTrue(updated.dropFirst().allSatisfy(\.wasAdjusted))
-    }
-
-    func testMorningExcessReducesLaterPeriods() {
-        let updated = planner.synchronizedTargets(
-            targets,
-            entries: [snapshot(amount: 1_200, hour: 10)],
-            goalMilliliters: 4_000,
-            now: date(hour: 10),
-            automaticRedistributionEnabled: true
-        )
-
-        XCTAssertEqual(plannedAmounts(updated), [1_000, 1_400, 1_400])
-        XCTAssertTrue(updated.dropFirst().allSatisfy(\.wasAdjusted))
-    }
-
-    func testDisabledRedistributionPreservesOriginalTargets() {
-        let updated = planner.synchronizedTargets(
-            targets,
-            entries: [snapshot(amount: 500, hour: 10)],
-            goalMilliliters: 4_000,
-            now: date(hour: 13),
-            automaticRedistributionEnabled: false
-        )
-
-        XCTAssertEqual(plannedAmounts(updated), [1_000, 1_500, 1_500])
-        XCTAssertFalse(updated.contains(where: \.wasAdjusted))
-    }
-
     func testViewDataGroupsOnlyTheLogsInsideEachPeriod() {
         let entries = [
             entry(amount: 200, hour: 11, minute: 59),
@@ -197,6 +158,63 @@ final class DailyPlanPeriodTests: XCTestCase {
         )
 
         XCTAssertEqual(period.completedCheckpointCount, 2)
+        XCTAssertEqual(period.checkpointStates, [.completed, .completed, .next])
+    }
+
+    func testPastUnreachedCheckpointsAreMissed() {
+        let checkpoints = [
+            PlanCheckpointViewData(
+                scheduledDate: date(hour: 8),
+                cumulativeMilliliters: 300
+            ),
+            PlanCheckpointViewData(
+                scheduledDate: date(hour: 9),
+                cumulativeMilliliters: 600
+            ),
+            PlanCheckpointViewData(
+                scheduledDate: date(hour: 10),
+                cumulativeMilliliters: 900
+            )
+        ]
+        let period = PlanPeriodViewData(
+            period: .morning,
+            entries: [],
+            plannedMilliliters: 900,
+            checkpoints: checkpoints,
+            now: date(hour: 13, minute: 36),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(period.completedCheckpointCount, 0)
+        XCTAssertEqual(period.checkpointStates, [.missed, .missed, .missed])
+    }
+
+    func testNextCheckpointSkipsMissedCheckpoints() {
+        let checkpoints = [
+            PlanCheckpointViewData(
+                scheduledDate: date(hour: 13),
+                cumulativeMilliliters: 300
+            ),
+            PlanCheckpointViewData(
+                scheduledDate: date(hour: 14),
+                cumulativeMilliliters: 600
+            ),
+            PlanCheckpointViewData(
+                scheduledDate: date(hour: 15),
+                cumulativeMilliliters: 900
+            )
+        ]
+        let period = PlanPeriodViewData(
+            period: .afternoon,
+            entries: [],
+            plannedMilliliters: 900,
+            checkpoints: checkpoints,
+            now: date(hour: 13, minute: 36),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(period.completedCheckpointCount, 0)
+        XCTAssertEqual(period.checkpointStates, [.missed, .next, .upcoming])
     }
 
     func testFallbackCheckpointsRespectConfiguredActivePeriodAndInterval() {

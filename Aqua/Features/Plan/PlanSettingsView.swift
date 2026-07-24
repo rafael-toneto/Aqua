@@ -65,19 +65,6 @@ struct PlanSettingsView: View {
                     )
                 }
 
-                Section("Adjustments") {
-                    adjustmentToggle(
-                        title: "Automatic redistribution",
-                        description: "Adjusts later period goals when an earlier period finishes below its goal or goes above it.",
-                        isOn: $preferences.automaticRedistributionEnabled
-                    )
-                    adjustmentToggle(
-                        title: "May add new moments",
-                        description: "Allows an updated plan to add moments when more are needed to organize the remaining goal.",
-                        isOn: $preferences.mayAddMoments
-                    )
-                }
-
                 Section {
                     Label(
                         "Aqua organizes the goal you selected and does not provide medical advice.",
@@ -116,24 +103,6 @@ struct PlanSettingsView: View {
                 preferences[keyPath: keyPath] = (components.hour ?? 0) * 60 + (components.minute ?? 0)
             }
         )
-    }
-
-    private func adjustmentToggle(
-        title: String,
-        description: String,
-        isOn: Binding<Bool>
-    ) -> some View {
-        Toggle(isOn: isOn) {
-            VStack(alignment: .leading, spacing: AquaSpacing.extraSmall) {
-                Text(title)
-                Text(description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.vertical, AquaSpacing.extraSmall)
-        }
-        .accessibilityHint(description)
     }
 
     private func timeDate(minutes: Int) -> Date {

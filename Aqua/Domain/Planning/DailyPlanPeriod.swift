@@ -109,98 +109,9 @@ struct DailyPlanPeriodPlanner: Sendable {
         }
     }
 
-    func synchronizedTargets(
-        _ targets: [HydrationPlanPeriodTarget],
-        entries: [HydrationEntrySnapshot],
-        goalMilliliters: Int,
-        now: Date,
-        automaticRedistributionEnabled: Bool
-    ) -> [HydrationPlanPeriodTarget] {
-        let normalized = normalizedTargets(targets, goalMilliliters: goalMilliliters)
-        guard automaticRedistributionEnabled else {
-            return normalized.map {
-                HydrationPlanPeriodTarget(
-                    period: $0.period,
-                    originalMilliliters: $0.originalMilliliters,
-                    plannedMilliliters: $0.originalMilliliters
-                )
-            }
-        }
-
-        let consumed = consumedByPeriod(entries)
-        var result = normalized
-        var remainingGoal = max(goalMilliliters, 0)
-
-        for index in HydrationDayPeriod.allCases.indices {
-            let remainingPeriods = Array(HydrationDayPeriod.allCases[index...])
-            let weights = Dictionary(uniqueKeysWithValues: remainingPeriods.map { period in
-                let original = normalized.first(where: { $0.period == period })?.originalMilliliters ?? 0
-                return (period, original)
-            })
-            let allocations = allocate(remainingGoal, weights: weights)
-            let period = HydrationDayPeriod.allCases[index]
-            let target = allocations[period, default: 0]
-
-            if let targetIndex = result.firstIndex(where: { $0.period == period }) {
-                result[targetIndex].plannedMilliliters = target
-            }
-
-            let actual = consumed[period, default: 0]
-            let hasEnded = now >= period.endDate(on: now, calendar: calendar)
-            let wasExceeded = actual > target
-            guard hasEnded || wasExceeded else {
-                for futurePeriod in remainingPeriods.dropFirst() {
-                    if let futureIndex = result.firstIndex(where: { $0.period == futurePeriod }) {
-                        result[futureIndex].plannedMilliliters = allocations[futurePeriod, default: 0]
-                    }
-                }
-                break
-            }
-
-            remainingGoal = max(remainingGoal - actual, 0)
-        }
-
-        return result
-    }
-
-    func consumedByPeriod(
-        _ entries: [HydrationEntrySnapshot]
-    ) -> [HydrationDayPeriod: Int] {
-        var result = Dictionary(
-            uniqueKeysWithValues: HydrationDayPeriod.allCases.map { ($0, 0) }
-        )
-        for entry in entries {
-            let period = period(containing: entry.date)
-            let addition = result[period, default: 0].addingReportingOverflow(
-                max(entry.amountMilliliters, 0)
-            )
-            result[period] = addition.overflow ? Int.max : addition.partialValue
-        }
-        return result
-    }
-
     func period(containing date: Date) -> HydrationDayPeriod {
         HydrationDayPeriod.allCases.first(where: { $0.contains(date, calendar: calendar) })
             ?? .evening
-    }
-
-    private func normalizedTargets(
-        _ targets: [HydrationPlanPeriodTarget],
-        goalMilliliters: Int
-    ) -> [HydrationPlanPeriodTarget] {
-        var originals: [HydrationDayPeriod: Int] = [:]
-        for target in targets {
-            originals[target.period] = max(target.originalMilliliters, 0)
-        }
-        let allocated = allocate(max(goalMilliliters, 0), weights: originals)
-        return HydrationDayPeriod.allCases.map { period in
-            let amount = allocated[period, default: 0]
-            return HydrationPlanPeriodTarget(
-                period: period,
-                originalMilliliters: amount,
-                plannedMilliliters: amount
-            )
-        }
     }
 
     private func activeMinuteWeights(

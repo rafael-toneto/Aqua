@@ -2,7 +2,6 @@ import Foundation
 
 struct PlanReconciliationResult: Sendable, Equatable {
     let plan: DailyHydrationPlan
-    let needsRedistribution: Bool
     let didChange: Bool
 }
 
@@ -46,7 +45,6 @@ struct DailyPlanReconciler: DailyPlanReconciling {
             updatedPlan.updatedAt = now
             return PlanReconciliationResult(
                 plan: updatedPlan,
-                needsRedistribution: false,
                 didChange: updatedPlan != originalPlan
             )
         }
@@ -84,7 +82,6 @@ struct DailyPlanReconciler: DailyPlanReconciling {
             consumptionToAllocate -= allocated
         }
 
-        var needsRedistribution = false
         let graceInterval = TimeInterval(DailyPlanRules.gracePeriodMinutes * 60)
         let currentLeadInterval: TimeInterval = 15 * 60
 
@@ -100,7 +97,6 @@ struct DailyPlanReconciler: DailyPlanReconciling {
                 } else {
                     updatedPlan.moments[index].status = .missed
                 }
-                needsRedistribution = true
             } else if now >= moment.scheduledDate.addingTimeInterval(-currentLeadInterval) {
                 updatedPlan.moments[index].status = moment.completedMilliliters > 0
                     ? .partiallyCompleted
@@ -113,7 +109,6 @@ struct DailyPlanReconciler: DailyPlanReconciling {
         updatedPlan.updatedAt = now
         return PlanReconciliationResult(
             plan: updatedPlan,
-            needsRedistribution: needsRedistribution,
             didChange: updatedPlan != originalPlan
         )
     }
