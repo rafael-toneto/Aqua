@@ -15,6 +15,7 @@ struct SettingsView: View {
         }
     }
 
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel: SettingsViewModel
     @State private var editableValue: EditableValue?
 
@@ -32,111 +33,157 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    Button {
-                        viewModel.toggleVolumeDisplayUnit()
-                    } label: {
-                        HStack(spacing: AquaSpacing.medium) {
-                            Image(systemName: "ruler")
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(.blue)
-                                .frame(width: 28)
-                                .accessibilityHidden(true)
-
-                            Text("Measurement Unit")
-                                .foregroundStyle(.primary)
-
-                            Spacer(minLength: AquaSpacing.small)
-
-                            Text(viewModel.volumeDisplayUnit.title)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
-
-                            Image(systemName: "arrow.left.arrow.right")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.blue)
-                                .accessibilityHidden(true)
-                        }
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Measurement unit")
-                    .accessibilityValue(viewModel.volumeDisplayUnit.accessibilityDescription)
-                    .accessibilityHint("Switches between liters and milliliters, and fluid ounces")
-                } header: {
-                    Text("Units")
-                } footer: {
-                    Text("Tap to switch how water amounts are displayed and entered.")
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 22) {
+                    pageHeader
+                    unitsSection
+                    dailyGoalSection
+                    quickAddSection
+                    aboutSection
                 }
-
-                Section {
-                    editableSettingRow(
-                        title: "Daily goal",
-                        value: viewModel.formattedAmount(from: viewModel.savedGoalInMilliliters),
-                        systemImage: "target",
-                        accessibilityHint: "Sets the amount of water you aim to drink each day"
-                    ) {
-                        editableValue = .dailyGoal
-                    }
-
-                    if let errorMessage = viewModel.errorMessage {
-                        AquaErrorMessage(message: errorMessage)
-                    }
-                } header: {
-                    Text("Daily Water Goal")
-                } footer: {
-                    Text("Your goal is stored on this device. Changing it also updates today’s plan.")
-                }
-
-                Section {
-                    ForEach(viewModel.savedQuickAddAmountsInMilliliters.indices, id: \.self) { index in
-                        editableSettingRow(
-                            title: "Slot \(index + 1)",
-                            value: viewModel.formattedAmount(
-                                from: viewModel.savedQuickAddAmountsInMilliliters[index]
-                            ),
-                            systemImage: "drop.fill",
-                            accessibilityHint: "Sets the amount added by quick-add slot \(index + 1)"
-                        ) {
-                            editableValue = .quickAddAmount(index)
-                        }
-                    }
-
-                    if let errorMessage = viewModel.quickAddErrorMessage {
-                        AquaErrorMessage(message: errorMessage)
-                    }
-                } header: {
-                    Text("Quick Add Amounts")
-                } footer: {
-                    Text("Choose the three amounts shown on the Today screen. These values are stored on this device.")
-                }
-
-                Section("About") {
-                    Label(
-                        "\(AppBrand.displayName) supports healthy hydration habits but does not provide medical advice.",
-                        systemImage: "heart.text.square"
-                    )
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                }
-
-                Section {
-                    comingLaterRow("HealthKit", systemImage: "heart.fill")
-                } header: {
-                    Text("Coming Later")
-                } footer: {
-                    Text("This feature is informational only and is not active in this version.")
-                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, AquaSpacing.extraLarge)
+                .frame(maxWidth: 640, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Settings")
+            .background(palette.background.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear { viewModel.load() }
             .sheet(item: $editableValue) { value in
                 editor(for: value)
             }
             .sensoryFeedback(.success, trigger: viewModel.feedbackTrigger)
+        }
+        .tint(palette.accent)
+    }
+
+    private var pageHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Your hydration")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(palette.secondary)
+
+            Text("Settings")
+                .font(.system(size: 25, weight: .bold))
+                .foregroundStyle(palette.primary)
+
+            Divider()
+                .overlay(palette.divider)
+                .padding(.top, 8)
+        }
+    }
+
+    private var unitsSection: some View {
+        SettingsSection(
+            title: "Units",
+            footer: "Tap to switch how water amounts are displayed and entered."
+        ) {
+            Button {
+                viewModel.toggleVolumeDisplayUnit()
+            } label: {
+                HStack(spacing: 12) {
+                    rowIcon("ruler")
+
+                    Text("Measurement Unit")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(palette.primary)
+
+                    Spacer(minLength: AquaSpacing.small)
+
+                    Text(viewModel.volumeDisplayUnit.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(palette.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(palette.accent.opacity(0.1), in: Capsule())
+                        .contentTransition(.numericText())
+
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(palette.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(palette.divider.opacity(0.38), in: Circle())
+                        .accessibilityHidden(true)
+                }
+                .padding(14)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Measurement unit")
+            .accessibilityValue(viewModel.volumeDisplayUnit.accessibilityDescription)
+            .accessibilityHint("Switches between liters and milliliters, and fluid ounces")
+        }
+    }
+
+    private var dailyGoalSection: some View {
+        SettingsSection(
+            title: "Daily Water Goal",
+            footer: "Your goal is stored on this device. Changing it also updates today’s plan."
+        ) {
+            VStack(spacing: 0) {
+                editableSettingRow(
+                    title: "Daily goal",
+                    value: viewModel.formattedAmount(from: viewModel.savedGoalInMilliliters),
+                    systemImage: "target",
+                    accessibilityHint: "Sets the amount of water you aim to drink each day"
+                ) {
+                    editableValue = .dailyGoal
+                }
+
+                if let errorMessage = viewModel.errorMessage {
+                    settingsDivider
+                    settingsError(message: errorMessage)
+                }
+            }
+        }
+    }
+
+    private var quickAddSection: some View {
+        SettingsSection(
+            title: "Quick Add Amounts",
+            footer: "Choose the three amounts shown on the Today screen. These values are stored on this device."
+        ) {
+            VStack(spacing: 0) {
+                ForEach(viewModel.savedQuickAddAmountsInMilliliters.indices, id: \.self) { index in
+                    editableSettingRow(
+                        title: "Slot \(index + 1)",
+                        value: viewModel.formattedAmount(
+                            from: viewModel.savedQuickAddAmountsInMilliliters[index]
+                        ),
+                        systemImage: "drop.fill",
+                        accessibilityHint: "Sets the amount added by quick-add slot \(index + 1)"
+                    ) {
+                        editableValue = .quickAddAmount(index)
+                    }
+
+                    if index != viewModel.savedQuickAddAmountsInMilliliters.indices.last {
+                        settingsDivider
+                    }
+                }
+
+                if let errorMessage = viewModel.quickAddErrorMessage {
+                    settingsDivider
+                    settingsError(message: errorMessage)
+                }
+            }
+        }
+    }
+
+    private var aboutSection: some View {
+        SettingsSection(title: "About") {
+            HStack(alignment: .top, spacing: 12) {
+                rowIcon("heart.text.square")
+
+                Text(
+                    "\(AppBrand.displayName) supports healthy hydration habits but does not provide medical advice."
+                )
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(palette.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(14)
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -147,38 +194,36 @@ struct SettingsView: View {
         accessibilityHint: String,
         edit: @escaping () -> Void
     ) -> some View {
-        HStack(spacing: AquaSpacing.medium) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.blue)
-                .frame(width: 28)
-                .accessibilityHidden(true)
+        Button(action: edit) {
+            HStack(spacing: 12) {
+                rowIcon(systemImage)
 
-            Text(title)
+                Text(title)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(palette.primary)
 
-            Spacer(minLength: AquaSpacing.small)
+                Spacer(minLength: AquaSpacing.small)
 
-            Text(value)
-                .font(.system(.body, design: .rounded, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .contentTransition(.numericText())
+                Text(value)
+                    .font(.system(size: 13, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(palette.accent)
+                    .contentTransition(.numericText())
 
-            Button(action: edit) {
                 Image(systemName: "pencil")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(width: 32, height: 32)
-                    .background(.blue.opacity(0.12), in: Circle())
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(palette.accent)
+                    .frame(width: 28, height: 28)
+                    .background(palette.accent.opacity(0.11), in: Circle())
+                    .accessibilityHidden(true)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.blue)
-            .accessibilityLabel("Edit \(title)")
-            .accessibilityValue(value)
-            .accessibilityHint(accessibilityHint)
+            .padding(14)
+            .contentShape(Rectangle())
         }
-        .frame(minHeight: 44)
-        .accessibilityElement(children: .contain)
+        .buttonStyle(.plain)
+        .accessibilityLabel("Edit \(title)")
+        .accessibilityValue(value)
+        .accessibilityHint(accessibilityHint)
     }
 
     @ViewBuilder
@@ -217,14 +262,37 @@ struct SettingsView: View {
         }
     }
 
-    private func comingLaterRow(_ title: String, systemImage: String) -> some View {
-        Label(title, systemImage: systemImage)
-            .foregroundStyle(.secondary)
-            .accessibilityLabel("\(title), coming later")
+    private func rowIcon(_ systemImage: String) -> some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(palette.accent)
+            .frame(width: 34, height: 34)
+            .background(palette.accent.opacity(0.11), in: Circle())
+            .accessibilityHidden(true)
+    }
+
+    private var settingsDivider: some View {
+        Divider()
+            .overlay(palette.divider)
+            .padding(.leading, 60)
+    }
+
+    private func settingsError(message: String) -> some View {
+        Label(message, systemImage: "exclamationmark.circle.fill")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(palette.danger)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityLabel("Error: \(message)")
+    }
+
+    private var palette: SettingsPalette {
+        SettingsPalette(colorScheme: colorScheme)
     }
 }
 
 private struct AmountEditorSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isAmountFieldFocused: Bool
 
@@ -263,38 +331,27 @@ private struct AmountEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    HStack(spacing: AquaSpacing.medium) {
-                        Image(systemName: systemImage)
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.blue)
-                            .frame(width: 28)
-                            .accessibilityHidden(true)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    introduction
+                    amountField
 
-                        TextField(fieldLabel, text: $amountText)
-                            .keyboardType(.decimalPad)
-                            .focused($isAmountFieldFocused)
-                            .font(.system(.title2, design: .rounded, weight: .semibold))
-                            .accessibilityLabel(accessibilityLabel)
-
-                        Text(unitSymbol)
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, AquaSpacing.extraSmall)
-                } footer: {
-                    Text(footer)
-                }
-
-                if let errorMessage {
-                    Section {
-                        AquaErrorMessage(message: errorMessage)
+                    if let errorMessage {
+                        errorCard(errorMessage)
                     }
                 }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, AquaSpacing.extraLarge)
+                .frame(maxWidth: 560, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .background(palette.background.ignoresSafeArea())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(palette.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -308,8 +365,109 @@ private struct AmountEditorSheet: View {
             }
             .onAppear { isAmountFieldFocused = true }
         }
+        .tint(palette.accent)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
+        .presentationBackground(palette.background)
+    }
+
+    private var introduction: some View {
+        HStack(spacing: AquaSpacing.medium) {
+            Image(systemName: systemImage)
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(palette.accent)
+                .frame(width: 52, height: 52)
+                .background(
+                    LinearGradient(
+                        colors: [palette.accent.opacity(0.22), palette.accent.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    in: Circle()
+                )
+                .overlay {
+                    Circle()
+                        .stroke(palette.accent.opacity(0.28), lineWidth: 1)
+                }
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: AquaSpacing.extraSmall) {
+                Text(fieldLabel)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(palette.primary)
+
+                Text("Enter the new amount using \(unitSymbol).")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(palette.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var amountField: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(fieldLabel.uppercased())
+                .font(.system(size: 10, weight: .bold))
+                .tracking(1.25)
+                .foregroundStyle(palette.secondary)
+
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                TextField("0", text: $amountText)
+                    .keyboardType(.decimalPad)
+                    .focused($isAmountFieldFocused)
+                    .font(.system(size: 38, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(palette.primary)
+                    .tint(palette.accent)
+                    .accessibilityLabel(accessibilityLabel)
+
+                Text(unitSymbol)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(palette.secondary)
+            }
+            .padding(.horizontal, 18)
+            .frame(minHeight: 76)
+            .background(
+                palette.controlBackground,
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(
+                        isAmountFieldFocused ? palette.accent.opacity(0.68) : palette.divider,
+                        lineWidth: isAmountFieldFocused ? 1.5 : 1
+                    )
+            }
+            .animation(.easeOut(duration: 0.18), value: isAmountFieldFocused)
+
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(palette.accent)
+                    .frame(width: 5, height: 5)
+
+                Text(footer)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(palette.secondary)
+            }
+            .padding(.leading, AquaSpacing.extraSmall)
+        }
+    }
+
+    private func errorCard(_ message: String) -> some View {
+        Label(message, systemImage: "exclamationmark.circle.fill")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(palette.danger)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                palette.danger.opacity(0.09),
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(palette.danger.opacity(0.24), lineWidth: 1)
+            }
+            .accessibilityLabel("Error: \(message)")
     }
 
     private var parsedAmount: Double? {
@@ -333,6 +491,90 @@ private struct AmountEditorSheet: View {
 
         if errorMessage == nil {
             dismiss()
+        }
+    }
+
+    private var palette: SettingsPalette {
+        SettingsPalette(colorScheme: colorScheme)
+    }
+}
+
+private struct SettingsSection<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let title: String
+    let footer: String?
+    let content: Content
+
+    init(
+        title: String,
+        footer: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.footer = footer
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .bold))
+                .tracking(1.15)
+                .foregroundStyle(palette.secondary)
+
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    palette.controlBackground,
+                    in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(palette.divider.opacity(0.8), lineWidth: 1)
+                }
+
+            if let footer {
+                Text(footer)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(palette.secondary)
+                    .padding(.horizontal, AquaSpacing.extraSmall)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var palette: SettingsPalette {
+        SettingsPalette(colorScheme: colorScheme)
+    }
+}
+
+private struct SettingsPalette {
+    let background: Color
+    let controlBackground: Color
+    let primary: Color
+    let secondary: Color
+    let divider: Color
+    let accent: Color
+    let danger: Color
+
+    init(colorScheme: ColorScheme) {
+        if colorScheme == .dark {
+            background = Color(red: 0.025, green: 0.075, blue: 0.12)
+            controlBackground = Color(red: 0.035, green: 0.12, blue: 0.18)
+            primary = Color(red: 0.81, green: 0.91, blue: 0.96)
+            secondary = Color(red: 0.30, green: 0.55, blue: 0.68)
+            divider = Color(red: 0.10, green: 0.25, blue: 0.34)
+            accent = Color(red: 0.05, green: 0.78, blue: 0.94)
+            danger = Color(red: 1.0, green: 0.42, blue: 0.42)
+        } else {
+            background = Color(red: 0.95, green: 0.98, blue: 0.99)
+            controlBackground = Color.white.opacity(0.82)
+            primary = Color(red: 0.05, green: 0.16, blue: 0.22)
+            secondary = Color(red: 0.27, green: 0.47, blue: 0.57)
+            divider = Color(red: 0.76, green: 0.86, blue: 0.90)
+            accent = Color(red: 0.00, green: 0.56, blue: 0.76)
+            danger = Color(red: 0.78, green: 0.16, blue: 0.18)
         }
     }
 }

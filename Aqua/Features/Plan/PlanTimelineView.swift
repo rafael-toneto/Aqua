@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct PlanTimelineView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let entries: [HydrationEntry]
     let moments: [HydrationPlanMoment]
     let addPlannedAmount: (HydrationPlanMoment) -> Void
@@ -8,7 +10,10 @@ struct PlanTimelineView: View {
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             Text("Today’s Timeline")
-                .font(.headline)
+                .font(.system(size: 10, weight: .bold))
+                .tracking(1.25)
+                .textCase(.uppercase)
+                .foregroundStyle(palette.secondary)
                 .padding(.bottom, AquaSpacing.medium)
 
             ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
@@ -36,34 +41,47 @@ struct PlanTimelineView: View {
             }
         }
     }
+
+    private var palette: PlanPalette {
+        PlanPalette(colorScheme: colorScheme)
+    }
 }
 
 private struct CompletedHydrationEntryCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let entry: HydrationEntry
 
     var body: some View {
         VStack(alignment: .leading, spacing: AquaSpacing.small) {
             HydrationEntryRow(entry: entry)
             Divider()
+                .overlay(palette.divider)
             Label("Completed", systemImage: "checkmark.circle.fill")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.green)
+                .foregroundStyle(palette.success)
         }
         .padding(.horizontal, AquaSpacing.medium)
         .padding(.vertical, AquaSpacing.small)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            Color(uiColor: .secondarySystemGroupedBackground),
+            palette.controlBackground,
             in: RoundedRectangle(cornerRadius: AquaCornerRadius.card)
         )
         .overlay {
             RoundedRectangle(cornerRadius: AquaCornerRadius.card)
-                .stroke(Color(uiColor: .separator).opacity(0.35), lineWidth: 0.5)
+                .stroke(palette.divider.opacity(0.8), lineWidth: 0.5)
         }
+    }
+
+    private var palette: PlanPalette {
+        PlanPalette(colorScheme: colorScheme)
     }
 }
 
 private struct PlanTimelineMarker: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let status: HydrationPlanMomentStatus
     let showsLine: Bool
 
@@ -74,13 +92,13 @@ private struct PlanTimelineMarker: View {
                     .fill(markerColor.opacity(status == .current ? 1 : 0.14))
                 Image(systemName: icon)
                     .font(.caption.bold())
-                    .foregroundStyle(status == .current ? .white : markerColor)
+                    .foregroundStyle(status == .current ? palette.background : markerColor)
             }
             .frame(width: 32, height: 32)
 
             if showsLine {
                 Rectangle()
-                    .fill(.separator)
+                    .fill(palette.divider)
                     .frame(width: 2)
                     .frame(minHeight: 100)
             }
@@ -90,12 +108,16 @@ private struct PlanTimelineMarker: View {
 
     private var markerColor: Color {
         switch status {
-        case .completed: .green
-        case .current: .blue
-        case .missed, .partiallyCompleted, .adjusted: .orange
-        case .upcoming: .blue
-        case .cancelled: .secondary
+        case .completed: palette.success
+        case .current: palette.accent
+        case .missed, .partiallyCompleted, .adjusted: palette.warning
+        case .upcoming: palette.accent
+        case .cancelled: palette.secondary
         }
+    }
+
+    private var palette: PlanPalette {
+        PlanPalette(colorScheme: colorScheme)
     }
 
     private var icon: String {

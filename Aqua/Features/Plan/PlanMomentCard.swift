@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PlanMomentCard: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.waterVolumeUnit) private var waterVolumeUnit
 
     let moment: HydrationPlanMoment
@@ -11,6 +12,7 @@ struct PlanMomentCard: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(moment.scheduledDate.formatted(date: .omitted, time: .shortened))
                     .font(.headline)
+                    .foregroundStyle(palette.primary)
                 Spacer()
                 statusLabel
             }
@@ -18,6 +20,7 @@ struct PlanMomentCard: View {
             HStack(alignment: .firstTextBaseline, spacing: AquaSpacing.small) {
                 Text(formatted(Double(moment.plannedMilliliters)))
                     .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(palette.primary)
                     .strikethrough(moment.status == .completed)
                 if moment.completedMilliliters > 0 && moment.status != .completed {
                     Text("· \(formatted(Double(moment.completedMilliliters))) logged")
@@ -37,11 +40,13 @@ struct PlanMomentCard: View {
                     Label("Add planned amount", systemImage: "plus.circle.fill")
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 44)
+                        .foregroundStyle(palette.background)
+                        .background(
+                            palette.accent,
+                            in: RoundedRectangle(cornerRadius: AquaCornerRadius.control)
+                        )
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(moment.status == .current ? .white : .blue)
-                .foregroundStyle(moment.status == .current ? .blue : .white)
-                .buttonBorderShape(.roundedRectangle(radius: AquaCornerRadius.control))
+                .buttonStyle(.plain)
                 .accessibilityHint("Creates a real hydration entry and updates the plan")
             }
         }
@@ -50,9 +55,8 @@ struct PlanMomentCard: View {
         .background(cardBackground, in: RoundedRectangle(cornerRadius: AquaCornerRadius.card))
         .overlay {
             RoundedRectangle(cornerRadius: AquaCornerRadius.card)
-                .stroke(borderColor, lineWidth: moment.status == .current ? 0 : 0.5)
+                .stroke(borderColor, lineWidth: moment.status == .current ? 1 : 0.5)
         }
-        .foregroundStyle(moment.status == .current ? .white : .primary)
         .opacity([.completed, .cancelled].contains(moment.status) ? 0.68 : 1)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityLabel)
@@ -62,6 +66,7 @@ struct PlanMomentCard: View {
     private var statusLabel: some View {
         Label(statusTitle, systemImage: statusIcon)
             .font(.caption.weight(.semibold))
+            .foregroundStyle(statusColor)
             .padding(.horizontal, AquaSpacing.small)
             .padding(.vertical, AquaSpacing.extraSmall)
             .background(statusBadgeBackground, in: Capsule())
@@ -107,21 +112,43 @@ struct PlanMomentCard: View {
     }
 
     private var cardBackground: Color {
-        moment.status == .current ? .blue : Color(uiColor: .secondarySystemGroupedBackground)
+        palette.controlBackground
     }
 
     private var cardSecondaryColor: Color {
-        moment.status == .current ? .white.opacity(0.82) : .secondary
+        palette.secondary
     }
 
     private var borderColor: Color {
-        moment.status == .adjusted
-            ? .orange.opacity(0.45)
-            : Color(uiColor: .separator).opacity(0.35)
+        switch moment.status {
+        case .current:
+            palette.accent.opacity(0.5)
+        case .adjusted:
+            palette.warning.opacity(0.45)
+        default:
+            palette.divider.opacity(0.8)
+        }
     }
 
     private var statusBadgeBackground: Color {
-        moment.status == .current ? .white.opacity(0.18) : .secondary.opacity(0.12)
+        statusColor.opacity(0.12)
+    }
+
+    private var statusColor: Color {
+        switch moment.status {
+        case .completed:
+            palette.success
+        case .missed, .partiallyCompleted, .adjusted:
+            palette.warning
+        case .current, .upcoming:
+            palette.accent
+        case .cancelled:
+            palette.secondary
+        }
+    }
+
+    private var palette: PlanPalette {
+        PlanPalette(colorScheme: colorScheme)
     }
 
     private var accessibilityLabel: String {
