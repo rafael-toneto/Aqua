@@ -548,33 +548,3 @@ private struct SettingsSection<Content: View>: View {
         SettingsPalette(colorScheme: colorScheme)
     }
 }
-
-private struct SettingsPalette {
-    let background: Color
-    let controlBackground: Color
-    let primary: Color
-    let secondary: Color
-    let divider: Color
-    let accent: Color
-    let danger: Color
-
-    init(colorScheme: ColorScheme) {
-        if colorScheme == .dark {
-            background = Color(red: 0.025, green: 0.075, blue: 0.12)
-            controlBackground = Color(red: 0.035, green: 0.12, blue: 0.18)
-            primary = Color(red: 0.81, green: 0.91, blue: 0.96)
-            secondary = Color(red: 0.30, green: 0.55, blue: 0.68)
-            divider = Color(red: 0.10, green: 0.25, blue: 0.34)
-            accent = Color(red: 0.05, green: 0.78, blue: 0.94)
-            danger = Color(red: 1.0, green: 0.42, blue: 0.42)
-        } else {
-            background = Color(red: 0.95, green: 0.98, blue: 0.99)
-            controlBackground = Color.white.opacity(0.82)
-            primary = Color(red: 0.05, green: 0.16, blue: 0.22)
-            secondary = Color(red: 0.27, green: 0.47, blue: 0.57)
-            divider = Color(red: 0.76, green: 0.86, blue: 0.90)
-            accent = Color(red: 0.00, green: 0.56, blue: 0.76)
-            danger = Color(red: 0.78, green: 0.16, blue: 0.18)
-        }
-    }
-}
