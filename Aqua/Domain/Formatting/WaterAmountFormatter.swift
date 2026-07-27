@@ -58,6 +58,25 @@ enum WaterAmountFormatter {
         }
     }
 
+    static func preciseString(
+        from amountInMilliliters: Double,
+        unit: WaterVolumeUnit = .metric
+    ) -> String {
+        switch unit {
+        case .metric:
+            if amountInMilliliters >= 1_000 {
+                let liters = amountInMilliliters / 1_000
+                return "\(formattedNumber(liters, fractionDigits: 2)) L"
+            }
+
+            return "\(formattedNumber(amountInMilliliters, maximumFractionDigits: 0)) ml"
+
+        case .fluidOunces:
+            let fluidOunces = amountInMilliliters / millilitersPerFluidOunce
+            return "\(formattedNumber(fluidOunces, fractionDigits: 2)) fl oz"
+        }
+    }
+
     static func editorText(
         from amountInMilliliters: Double,
         unit: WaterVolumeUnit
@@ -109,6 +128,14 @@ enum WaterAmountFormatter {
             .number
                 .grouping(.never)
                 .precision(.fractionLength(0...maximumFractionDigits))
+        )
+    }
+
+    private static func formattedNumber(_ value: Double, fractionDigits: Int) -> String {
+        value.formatted(
+            .number
+                .grouping(.never)
+                .precision(.fractionLength(fractionDigits))
         )
     }
 }

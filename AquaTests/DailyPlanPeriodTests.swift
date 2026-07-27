@@ -132,6 +132,119 @@ final class DailyPlanPeriodTests: XCTestCase {
         XCTAssertEqual(checkpoints.last?.cumulativeMilliliters, 1_000)
     }
 
+    func testViewDataCarriesCheckpointTargetsAcrossPeriodBoundaries() {
+        let moments = [
+            moment(amount: 1_000, hour: 10),
+            moment(amount: 2_100, hour: 17, minute: 44),
+            moment(amount: 280, hour: 18, minute: 34),
+            moment(amount: 280, hour: 19, minute: 41),
+            moment(amount: 280, hour: 20, minute: 48),
+            moment(amount: 280, hour: 21, minute: 55),
+            moment(amount: 280, hour: 23, minute: 2)
+        ]
+        let periodTargets = [
+            target(.morning, amount: 1_000),
+            target(.afternoon, amount: 2_100),
+            target(.evening, amount: 1_400)
+        ]
+        let plan = DailyHydrationPlan(
+            id: UUID(),
+            calendarDay: day,
+            createdAt: date(hour: 8),
+            updatedAt: date(hour: 8),
+            goalMilliliters: 4_500,
+            consumedMillilitersAtGeneration: 0,
+            moments: moments,
+            revision: 0,
+            generationSource: .deterministicFallback,
+            adjustmentSummary: nil,
+            wasNormalized: false,
+            periodTargets: periodTargets
+        )
+        let progress = DailyHydrationProgress.calculate(entries: [], dailyGoal: 4_500)
+
+        let data = PlanViewData(
+            plan: plan,
+            entries: [],
+            progress: progress,
+            isOutsideActiveHours: false,
+            now: date(hour: 18),
+            preferences: .defaults,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            data.periods.map(\.cumulativePlannedMillilitersBeforePeriod),
+            [0, 1_000, 3_100]
+        )
+        XCTAssertEqual(
+            data.periods.flatMap(\.checkpoints).map(\.cumulativeMilliliters),
+            [1_000, 3_100, 3_380, 3_660, 3_940, 4_220, 4_500]
+        )
+    }
+
+    func testCheckpointCompletionUsesConsumptionAccumulatedAcrossTheDay() {
+        let checkpoint = PlanCheckpointViewData(
+            scheduledDate: date(hour: 18, minute: 34),
+            cumulativeMilliliters: 3_380
+        )
+        let period = PlanPeriodViewData(
+            period: .evening,
+            entries: [entry(amount: 280, hour: 18, minute: 30)],
+            plannedMilliliters: 1_400,
+            cumulativePlannedMillilitersBeforePeriod: 3_100,
+            consumedMillilitersBeforePeriod: 3_100,
+            checkpoints: [checkpoint],
+            now: date(hour: 18, minute: 34),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(period.cumulativeConsumedMilliliters, 3_380)
+        XCTAssertEqual(period.checkpointStates, [.completed])
+    }
+
+    func testCompletingDailyGoalMarksLaterPeriodsAsCompleted() {
+        let entries = [
+            entry(amount: 300, hour: 10),
+            entry(amount: 5_750, hour: 15, minute: 45)
+        ]
+        let plan = DailyHydrationPlan(
+            id: UUID(),
+            calendarDay: day,
+            createdAt: date(hour: 8),
+            updatedAt: date(hour: 15, minute: 45),
+            goalMilliliters: 5_700,
+            consumedMillilitersAtGeneration: 0,
+            moments: [],
+            revision: 0,
+            generationSource: .deterministicFallback,
+            adjustmentSummary: nil,
+            wasNormalized: false,
+            periodTargets: [
+                target(.morning, amount: 1_140),
+                target(.afternoon, amount: 3_140),
+                target(.evening, amount: 1_420)
+            ]
+        )
+        let progress = DailyHydrationProgress.calculate(entries: entries, dailyGoal: 5_700)
+
+        let data = PlanViewData(
+            plan: plan,
+            entries: entries,
+            progress: progress,
+            isOutsideActiveHours: false,
+            now: date(hour: 15, minute: 47),
+            preferences: .defaults,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(data.periods.map(\.state), [.missed, .completed, .completed])
+        XCTAssertEqual(data.completedPeriodCount, 2)
+        XCTAssertTrue(
+            data.periods[2].checkpointStates.allSatisfy { $0 == .completed }
+        )
+    }
+
     func testConsumedVolumeCompletesCumulativeCheckpoints() {
         let entries = [entry(amount: 500, hour: 13, minute: 20)]
         let checkpoints = [

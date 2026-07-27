@@ -133,7 +133,7 @@ struct PlanSettingsView: View {
 
             stepperRow(
                 title: "Default amount",
-                value: WaterAmountFormatter.string(
+                value: WaterAmountFormatter.preciseString(
                     from: Double(preferences.preferredAmountMilliliters),
                     unit: waterVolumeUnit
                 ),

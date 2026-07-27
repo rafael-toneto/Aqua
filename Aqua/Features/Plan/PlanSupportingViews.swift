@@ -102,7 +102,7 @@ struct PlanCompletedStateView: View {
                 .multilineTextAlignment(.center)
 
             Text(
-                "\(WaterAmountFormatter.string(from: progress.consumedAmount, unit: waterVolumeUnit)) logged today."
+                "\(WaterAmountFormatter.preciseString(from: progress.consumedAmount, unit: waterVolumeUnit)) logged today."
             )
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(palette.success)

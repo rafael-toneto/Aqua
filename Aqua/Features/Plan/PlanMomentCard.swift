@@ -163,6 +163,6 @@ struct PlanMomentCard: View {
     }
 
     private func formatted(_ amount: Double) -> String {
-        WaterAmountFormatter.string(from: amount, unit: waterVolumeUnit)
+        WaterAmountFormatter.preciseString(from: amount, unit: waterVolumeUnit)
     }
 }
