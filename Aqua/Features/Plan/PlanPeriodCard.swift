@@ -211,7 +211,7 @@ private struct PlanPeriodCard: View {
     }
 
     private var progressValue: Double {
-        if data.plannedMilliliters == 0, data.isComplete {
+        if data.isComplete {
             return progressTotal
         }
         return min(Double(data.consumedMilliliters), progressTotal)
@@ -222,7 +222,7 @@ private struct PlanPeriodCard: View {
     }
 
     private func formatted(_ amount: Int) -> String {
-        WaterAmountFormatter.string(from: Double(amount), unit: waterVolumeUnit)
+        WaterAmountFormatter.preciseString(from: Double(amount), unit: waterVolumeUnit)
     }
 }
 
@@ -345,11 +345,11 @@ private struct PlanCheckpointTimeline: View {
     private func progressTowardCheckpoint(at index: Int) -> Double {
         guard data.checkpoints.indices.contains(index) else { return 0 }
         let previousTarget = index == 0
-            ? 0
+            ? data.cumulativePlannedMillilitersBeforePeriod
             : data.checkpoints[index - 1].cumulativeMilliliters
         let target = data.checkpoints[index].cumulativeMilliliters
         let interval = max(target - previousTarget, 1)
-        let progressInInterval = data.consumedMilliliters - previousTarget
+        let progressInInterval = data.cumulativeConsumedMilliliters - previousTarget
         return min(max(Double(progressInInterval) / Double(interval), 0), 1)
     }
 
@@ -376,7 +376,7 @@ private struct PlanCheckpointTimeline: View {
     }
 
     private func formatted(_ amount: Int) -> String {
-        WaterAmountFormatter.string(from: Double(amount), unit: waterVolumeUnit)
+        WaterAmountFormatter.preciseString(from: Double(amount), unit: waterVolumeUnit)
     }
 }
 

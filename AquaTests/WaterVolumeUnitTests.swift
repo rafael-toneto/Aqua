@@ -14,6 +14,20 @@ final class WaterVolumeUnitTests: XCTestCase {
         XCTAssertEqual(amountInMilliliters, 236.5882365, accuracy: 0.000_001)
     }
 
+    func testPrecisePlanAmountsKeepTwoFractionDigitsInLiters() {
+        let decimalSeparator = Locale.current.decimalSeparator ?? "."
+
+        XCTAssertEqual(
+            WaterAmountFormatter.preciseString(from: 3_100),
+            "3\(decimalSeparator)10 L"
+        )
+        XCTAssertEqual(
+            WaterAmountFormatter.preciseString(from: 3_380),
+            "3\(decimalSeparator)38 L"
+        )
+        XCTAssertEqual(WaterAmountFormatter.preciseString(from: 285), "285 ml")
+    }
+
     func testAddWaterViewModelUsesTheSelectedDisplayUnit() async throws {
         let repository = FakeHydrationRepository()
         let trackingService = HydrationTrackingService(repository: repository)

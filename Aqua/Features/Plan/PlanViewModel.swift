@@ -46,14 +46,20 @@ struct PlanViewData: Equatable {
         let entriesByPeriod = Dictionary(grouping: entries) {
             planner.period(containing: $0.date)
         }
+        var cumulativePlannedMilliliters = 0
+        var cumulativeConsumedMilliliters = 0
         periods = HydrationDayPeriod.allCases.map { period in
-            PlanPeriodViewData(
+            let plannedMilliliters = max(targetByPeriod[period, default: 0], 0)
+            let periodData = PlanPeriodViewData(
                 period: period,
                 entries: entriesByPeriod[period, default: []].sorted { $0.date < $1.date },
-                plannedMilliliters: targetByPeriod[period, default: 0],
+                plannedMilliliters: plannedMilliliters,
+                cumulativePlannedMillilitersBeforePeriod: cumulativePlannedMilliliters,
+                consumedMillilitersBeforePeriod: cumulativeConsumedMilliliters,
                 checkpoints: checkpointPlanner.checkpoints(
                     for: period,
-                    plannedMilliliters: targetByPeriod[period, default: 0],
+                    plannedMilliliters: plannedMilliliters,
+                    cumulativeStartingMilliliters: cumulativePlannedMilliliters,
                     moments: currentRevisionMoments,
                     preferences: preferences,
                     calendarDay: now
@@ -61,6 +67,12 @@ struct PlanViewData: Equatable {
                 now: now,
                 calendar: calendar
             )
+            cumulativePlannedMilliliters = Self.addingClamped(
+                cumulativePlannedMilliliters,
+                plannedMilliliters
+            )
+            cumulativeConsumedMilliliters = periodData.cumulativeConsumedMilliliters
+            return periodData
         }
     }
 
@@ -87,6 +99,11 @@ struct PlanViewData: Equatable {
         let rounded = amount.rounded()
         guard rounded < Double(Int.max) else { return Int.max }
         return Int(rounded)
+    }
+
+    private static func addingClamped(_ lhs: Int, _ rhs: Int) -> Int {
+        let result = lhs.addingReportingOverflow(rhs)
+        return result.overflow ? Int.max : result.partialValue
     }
 }
 
@@ -121,11 +138,13 @@ struct PlanCheckpointPlanner {
     func checkpoints(
         for period: HydrationDayPeriod,
         plannedMilliliters: Int,
+        cumulativeStartingMilliliters: Int = 0,
         moments: [HydrationPlanMoment],
         preferences: PlanningPreferences,
         calendarDay: Date
     ) -> [PlanCheckpointViewData] {
         let target = max(plannedMilliliters, 0)
+        let cumulativeStart = max(cumulativeStartingMilliliters, 0)
         guard target > 0 else { return [] }
 
         let agentMoments = moments
@@ -140,7 +159,8 @@ struct PlanCheckpointPlanner {
             return makeCheckpoints(
                 dates: agentMoments.map(\.scheduledDate),
                 weights: agentMoments.map(\.plannedMilliliters),
-                target: target
+                target: target,
+                cumulativeStart: cumulativeStart
             )
         }
 
@@ -153,14 +173,16 @@ struct PlanCheckpointPlanner {
         return makeCheckpoints(
             dates: dates,
             weights: Array(repeating: 1, count: dates.count),
-            target: target
+            target: target,
+            cumulativeStart: cumulativeStart
         )
     }
 
     private func makeCheckpoints(
         dates: [Date],
         weights: [Int],
-        target: Int
+        target: Int,
+        cumulativeStart: Int
     ) -> [PlanCheckpointViewData] {
         let count = min(dates.count, weights.count, target)
         guard count > 0 else { return [] }
@@ -186,9 +208,14 @@ struct PlanCheckpointPlanner {
             previousTarget = cumulativeTarget
             return PlanCheckpointViewData(
                 scheduledDate: date,
-                cumulativeMilliliters: cumulativeTarget
+                cumulativeMilliliters: addingClamped(cumulativeStart, cumulativeTarget)
             )
         }
+    }
+
+    private func addingClamped(_ lhs: Int, _ rhs: Int) -> Int {
+        let result = lhs.addingReportingOverflow(rhs)
+        return result.overflow ? Int.max : result.partialValue
     }
 
     private func fallbackDates(
@@ -269,6 +296,8 @@ struct PlanPeriodViewData: Identifiable, Equatable {
     let entries: [HydrationEntry]
     let plannedMilliliters: Int
     let consumedMilliliters: Int
+    let cumulativePlannedMillilitersBeforePeriod: Int
+    let cumulativeConsumedMilliliters: Int
     let checkpoints: [PlanCheckpointViewData]
     let checkpointStates: [PlanCheckpointProgressState]
     let state: PlanPeriodProgressState
@@ -288,6 +317,8 @@ struct PlanPeriodViewData: Identifiable, Equatable {
         period: HydrationDayPeriod,
         entries: [HydrationEntry],
         plannedMilliliters: Int,
+        cumulativePlannedMillilitersBeforePeriod: Int = 0,
+        consumedMillilitersBeforePeriod: Int = 0,
         checkpoints: [PlanCheckpointViewData] = [],
         now: Date,
         calendar: Calendar
@@ -303,13 +334,26 @@ struct PlanPeriodViewData: Identifiable, Equatable {
         }
         self.plannedMilliliters = safePlanned
         consumedMilliliters = consumed
+        self.cumulativePlannedMillilitersBeforePeriod = max(
+            cumulativePlannedMillilitersBeforePeriod,
+            0
+        )
+        cumulativeConsumedMilliliters = Self.addingClamped(
+            max(consumedMillilitersBeforePeriod, 0),
+            consumed
+        )
+        let cumulativePlannedMilliliters = Self.addingClamped(
+            self.cumulativePlannedMillilitersBeforePeriod,
+            safePlanned
+        )
         checkpointStates = Self.checkpointStates(
             for: checkpoints,
-            consumedMilliliters: consumed,
+            consumedMilliliters: cumulativeConsumedMilliliters,
             now: now
         )
 
-        if consumed >= safePlanned {
+        if consumed >= safePlanned
+            || cumulativeConsumedMilliliters >= cumulativePlannedMilliliters {
             state = .completed
         } else if now >= period.endDate(on: now, calendar: calendar) {
             state = .missed
@@ -346,6 +390,11 @@ struct PlanPeriodViewData: Identifiable, Equatable {
         let rounded = amount.rounded()
         guard rounded < Double(Int.max) else { return Int.max }
         return Int(rounded)
+    }
+
+    private static func addingClamped(_ lhs: Int, _ rhs: Int) -> Int {
+        let result = lhs.addingReportingOverflow(rhs)
+        return result.overflow ? Int.max : result.partialValue
     }
 }
 
