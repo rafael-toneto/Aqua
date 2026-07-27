@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AddWaterSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isAmountFieldFocused: Bool
     @StateObject private var viewModel: AddWaterViewModel
@@ -25,56 +26,232 @@ struct AddWaterSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    HStack {
-                        TextField("Amount", text: $viewModel.amountText)
-                            .keyboardType(.decimalPad)
-                            .focused($isAmountFieldFocused)
-                            .font(.title2.weight(.semibold))
-                            .accessibilityLabel(
-                                "Water amount in \(viewModel.waterVolumeUnit.accessibilityDescription)"
-                            )
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    introduction
+                    amountField
 
-                        Text(viewModel.waterVolumeUnit.symbol)
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("Water Amount")
-                } footer: {
-                    Text("Enter an amount greater than zero.")
-                }
-
-                if let errorMessage = viewModel.errorMessage {
-                    Section {
-                        AquaErrorMessage(message: errorMessage)
+                    if let errorMessage = viewModel.errorMessage {
+                        errorView(errorMessage)
                     }
                 }
+                .frame(maxWidth: 560, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 32)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .background(palette.background.ignoresSafeArea())
             .navigationTitle("Add Water")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(palette.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .disabled(viewModel.isSaving)
+                    toolbarButton(
+                        systemImage: "xmark",
+                        accessibilityLabel: "Cancel",
+                        isProminent: false,
+                        isEnabled: !viewModel.isSaving
+                    ) {
+                        dismiss()
+                    }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        Task {
-                            guard await viewModel.save() else { return }
-                            await onSaved()
-                            dismiss()
-                        }
+                    toolbarButton(
+                        systemImage: "checkmark",
+                        accessibilityLabel: "Save",
+                        isProminent: true,
+                        isEnabled: viewModel.canSave
+                    ) {
+                        save()
                     }
-                    .fontWeight(.semibold)
-                    .disabled(!viewModel.canSave)
                 }
             }
             .interactiveDismissDisabled(viewModel.isSaving)
             .onAppear { isAmountFieldFocused = true }
         }
+        .tint(palette.accent)
         .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(palette.background)
+    }
+
+    private var introduction: some View {
+        HStack(spacing: 16) {
+            Image(systemName: "drop.fill")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(palette.accent)
+                .frame(width: 52, height: 52)
+                .background(
+                    LinearGradient(
+                        colors: [palette.accent.opacity(0.22), palette.accent.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    in: Circle()
+                )
+                .overlay {
+                    Circle()
+                        .stroke(palette.accent.opacity(0.28), lineWidth: 1)
+                }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Log your water")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(palette.primary)
+
+                Text("Enter the amount you just drank.")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(palette.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var amountField: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("WATER AMOUNT")
+                .font(.system(size: 10, weight: .bold))
+                .tracking(1.25)
+                .foregroundStyle(palette.secondary)
+
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                TextField("0", text: $viewModel.amountText)
+                    .keyboardType(.decimalPad)
+                    .focused($isAmountFieldFocused)
+                    .font(.system(size: 38, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(palette.primary)
+                    .tint(palette.accent)
+                    .accessibilityLabel(
+                        "Water amount in \(viewModel.waterVolumeUnit.accessibilityDescription)"
+                    )
+
+                Text(viewModel.waterVolumeUnit.symbol)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(palette.secondary)
+            }
+            .padding(.horizontal, 18)
+            .frame(minHeight: 76)
+            .background(
+                palette.controlBackground,
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(
+                        isAmountFieldFocused ? palette.accent.opacity(0.68) : palette.divider,
+                        lineWidth: isAmountFieldFocused ? 1.5 : 1
+                    )
+            }
+            .animation(.easeOut(duration: 0.18), value: isAmountFieldFocused)
+
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(palette.accent)
+                    .frame(width: 5, height: 5)
+
+                Text("Enter an amount greater than zero.")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(palette.secondary)
+            }
+            .padding(.leading, 4)
+        }
+    }
+
+    private func errorView(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 16, weight: .semibold))
+
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .foregroundStyle(palette.error)
+        .padding(14)
+        .background(palette.error.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(palette.error.opacity(0.24), lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func toolbarButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        isProminent: Bool,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .bold))
+                .frame(width: 36, height: 36)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func toolbarIconColor(isProminent: Bool, isEnabled: Bool) -> Color {
+        if isProminent {
+            return isEnabled ? palette.prominentButtonForeground : palette.secondary.opacity(0.5)
+        }
+        return palette.secondary
+    }
+
+    private func toolbarBackground(isProminent: Bool, isEnabled: Bool) -> Color {
+        guard isProminent else { return palette.controlBackground }
+        return isEnabled ? palette.accent : palette.controlBackground
+    }
+
+    private func save() {
+        Task {
+            guard await viewModel.save() else { return }
+            await onSaved()
+            dismiss()
+        }
+    }
+
+    private var palette: AddWaterPalette {
+        AddWaterPalette(colorScheme: colorScheme)
+    }
+}
+
+private struct AddWaterPalette {
+    let background: Color
+    let controlBackground: Color
+    let primary: Color
+    let secondary: Color
+    let divider: Color
+    let accent: Color
+    let error: Color
+    let prominentButtonForeground: Color
+
+    init(colorScheme: ColorScheme) {
+        if colorScheme == .dark {
+            background = Color(red: 0.025, green: 0.075, blue: 0.12)
+            controlBackground = Color(red: 0.035, green: 0.12, blue: 0.18)
+            primary = Color(red: 0.81, green: 0.91, blue: 0.96)
+            secondary = Color(red: 0.30, green: 0.55, blue: 0.68)
+            divider = Color(red: 0.10, green: 0.25, blue: 0.34)
+            accent = Color(red: 0.05, green: 0.78, blue: 0.94)
+            error = Color(red: 1.0, green: 0.42, blue: 0.42)
+            prominentButtonForeground = Color(red: 0.025, green: 0.075, blue: 0.12)
+        } else {
+            background = Color(red: 0.95, green: 0.98, blue: 0.99)
+            controlBackground = Color.white.opacity(0.82)
+            primary = Color(red: 0.05, green: 0.16, blue: 0.22)
+            secondary = Color(red: 0.27, green: 0.47, blue: 0.57)
+            divider = Color(red: 0.76, green: 0.86, blue: 0.90)
+            accent = Color(red: 0.00, green: 0.56, blue: 0.76)
+            error = Color(red: 0.78, green: 0.16, blue: 0.18)
+            prominentButtonForeground = .white
+        }
     }
 }
