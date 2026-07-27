@@ -84,7 +84,7 @@ final class InsightsViewModelTests: XCTestCase {
     }
 
     func testInsufficientHistoryProducesEmptyState() async {
-        let emptyReport = report(totalEntries: 1, sufficientHistory: false)
+        let emptyReport = report(totalEntries: 0, sufficientHistory: false)
         let service = SequencedInsightsService(responses: [
             .init(delay: nil, result: .success(emptyReport))
         ])
@@ -136,11 +136,11 @@ final class InsightsViewModelTests: XCTestCase {
         sufficientHistory: Bool = true
     ) -> HydrationInsightsReport {
         let snapshot = HydrationInsightsSnapshot(
-            periodStart: calendar.date(byAdding: .day, value: -4, to: now) ?? now,
+            periodStart: calendar.date(byAdding: .day, value: -13, to: now) ?? now,
             periodEnd: now,
-            analyzedDayCount: 5,
-            daysWithEntries: sufficientHistory ? 3 : 1,
-            daysWithoutEntries: sufficientHistory ? 2 : 4,
+            analyzedDayCount: 14,
+            daysWithEntries: sufficientHistory ? 3 : 0,
+            daysWithoutEntries: sufficientHistory ? 11 : 14,
             totalEntryCount: totalEntries,
             dailyGoalMilliliters: 2_000,
             goalAchievementPercentage: 25,

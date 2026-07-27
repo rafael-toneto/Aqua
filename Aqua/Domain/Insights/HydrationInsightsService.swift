@@ -1,8 +1,14 @@
 import Foundation
+import OSLog
 
 @MainActor
 final class HydrationInsightsService: HydrationInsightsProviding {
-    static let analysisDayCount = 5
+    static let analysisDayCount = 14
+
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "Aqua",
+        category: "HydrationInsights"
+    )
 
     private let trackingService: any HydrationTrackingServiceProtocol
     private let goalService: any HydrationGoalServiceProtocol
@@ -57,12 +63,19 @@ final class HydrationInsightsService: HydrationInsightsProviding {
 
         do {
             let generated = try await generator.generateInsights(from: snapshot)
-            guard validator.validate(generated, against: snapshot) else {
+            let validated = validator.validInsights(from: generated, against: snapshot)
+            guard !validated.isEmpty else {
+                Self.logger.error(
+                    "Foundation Models returned no insights accepted by app validation."
+                )
                 throw HydrationInsightsGenerationError.invalidResponse
             }
+            Self.logger.notice(
+                "Produced \(validated.count) validated insights from \(snapshot.daysWithEntries) recorded days in the \(snapshot.analyzedDayCount)-day window."
+            )
             return HydrationInsightsReport(
                 snapshot: snapshot,
-                insights: generated
+                insights: validated
             )
         } catch is CancellationError {
             throw CancellationError()

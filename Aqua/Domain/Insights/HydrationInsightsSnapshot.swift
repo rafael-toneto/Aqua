@@ -20,11 +20,11 @@ struct HydrationInsightsSnapshot: Equatable, Sendable {
     let lateDayConsumptionPercentage: Double
     /// Share of logs linked to a plan moment. It never infers unobserved missed moments.
     let planMomentAdherencePercentage: Double
-    /// Difference between the latest and previous seven-day averages, relative to the saved goal.
+    /// Difference between equally sized recent and previous segments, relative to the saved goal.
     let recentTrendPercentage: Double
 
     var hasSufficientHistory: Bool {
-        daysWithEntries >= 3 && totalEntryCount >= 3
+        daysWithEntries >= 1 && totalEntryCount >= 1
     }
 
     func evidence(for metric: HydrationInsightEvidenceMetric) -> String {
@@ -57,23 +57,23 @@ struct HydrationInsightsSnapshot: Equatable, Sendable {
 
     var compactPrompt: String {
         """
-        analyzedDays=\(analyzedDayCount)
-        daysWithEntries=\(daysWithEntries)
+        analyzedDayCount=\(analyzedDayCount)
+        recordedDayCount=\(daysWithEntries)
         daysWithoutEntries=\(daysWithoutEntries)
         totalEntries=\(totalEntryCount)
-        dailyGoalMilliliters=\(whole(dailyGoalMilliliters))
-        goalAchievementPercent=\(decimal(goalAchievementPercentage))
-        averageDailyMilliliters=\(decimal(averageDailyConsumptionMilliliters))
-        averageEntriesPerDay=\(decimal(averageEntriesPerDay))
-        averageFirstEntryMinutes=\(optionalDecimal(averageFirstEntryMinutes))
-        averageLastEntryMinutes=\(optionalDecimal(averageLastEntryMinutes))
-        morningConsumptionPercent=\(decimal(morningConsumptionPercentage))
-        afternoonConsumptionPercent=\(decimal(afternoonConsumptionPercentage))
-        eveningConsumptionPercent=\(decimal(eveningConsumptionPercentage))
+        savedDailyGoalMilliliters=\(whole(dailyGoalMilliliters))
+        percentOfDaysReachingGoal=\(decimal(goalAchievementPercentage))
+        averageDailyMillilitersIncludingNoEntryDays=\(decimal(averageDailyConsumptionMilliliters))
+        averageEntriesPerAnalyzedDay=\(decimal(averageEntriesPerDay))
+        averageFirstEntryMinuteOfDay=\(optionalDecimal(averageFirstEntryMinutes))
+        averageLastEntryMinuteOfDay=\(optionalDecimal(averageLastEntryMinutes))
+        percentOfRecordedVolumeInMorning=\(decimal(morningConsumptionPercentage))
+        percentOfRecordedVolumeInAfternoon=\(decimal(afternoonConsumptionPercentage))
+        percentOfRecordedVolumeInEvening=\(decimal(eveningConsumptionPercentage))
         averageIntervalMinutes=\(optionalDecimal(averageIntervalMinutes))
-        lateDayConsumptionPercent=\(decimal(lateDayConsumptionPercentage))
-        planLinkedEntryPercent=\(decimal(planMomentAdherencePercentage))
-        recentTrendRelativeToGoalPercent=\(decimal(recentTrendPercentage))
+        percentOfRecordedVolumeAfterSixPM=\(decimal(lateDayConsumptionPercentage))
+        percentOfEntriesLinkedToPlanMoments=\(decimal(planMomentAdherencePercentage))
+        recentVersusPreviousDailyAverageDifferenceAsPercentOfGoal=\(decimal(recentTrendPercentage))
         """
     }
 
