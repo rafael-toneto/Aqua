@@ -52,9 +52,6 @@ struct PlanSettingsView: View {
 
     private var sheetHeader: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Shape your daily schedule")
-                .font(.system(size: 14, weight: .regular))
-                .foregroundStyle(palette.secondary)
 
             HStack(alignment: .center, spacing: 16) {
                 Text("Plan Settings")
