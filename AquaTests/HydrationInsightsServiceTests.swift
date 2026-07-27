@@ -14,39 +14,39 @@ final class HydrationInsightsServiceTests: XCTestCase {
         ) ?? .distantPast
     }
 
-    func testCalculatesFiveDayAggregateMetricsIncludingMissingDays() async throws {
+    func testCalculatesFourteenDayAggregateMetricsIncludingMissingDays() async throws {
         let report = try await makeService(
             entries: representativeEntries()
         ).insights(asOf: now)
         let snapshot = report.snapshot
         let expectedStart = try XCTUnwrap(
-            calendar.date(byAdding: .day, value: -4, to: calendar.startOfDay(for: now))
+            calendar.date(byAdding: .day, value: -13, to: calendar.startOfDay(for: now))
         )
 
         XCTAssertEqual(snapshot.periodStart, expectedStart)
         XCTAssertEqual(snapshot.periodEnd, calendar.startOfDay(for: now))
-        XCTAssertEqual(snapshot.analyzedDayCount, 5)
+        XCTAssertEqual(snapshot.analyzedDayCount, 14)
         XCTAssertEqual(snapshot.daysWithEntries, 3)
-        XCTAssertEqual(snapshot.daysWithoutEntries, 2)
+        XCTAssertEqual(snapshot.daysWithoutEntries, 11)
         XCTAssertEqual(snapshot.totalEntryCount, 6)
-        XCTAssertEqual(snapshot.goalAchievementPercentage, 40, accuracy: 0.001)
-        XCTAssertEqual(snapshot.averageDailyConsumptionMilliliters, 1_000, accuracy: 0.001)
-        XCTAssertEqual(snapshot.averageEntriesPerDay, 1.2, accuracy: 0.001)
+        XCTAssertEqual(snapshot.goalAchievementPercentage, 2.0 / 14.0 * 100, accuracy: 0.001)
+        XCTAssertEqual(snapshot.averageDailyConsumptionMilliliters, 5_000.0 / 14.0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.averageEntriesPerDay, 6.0 / 14.0, accuracy: 0.001)
         XCTAssertEqual(try XCTUnwrap(snapshot.averageFirstEntryMinutes), 720, accuracy: 0.001)
         XCTAssertEqual(try XCTUnwrap(snapshot.averageLastEntryMinutes), 1_060, accuracy: 0.001)
         XCTAssertEqual(try XCTUnwrap(snapshot.averageIntervalMinutes), 340, accuracy: 0.001)
         XCTAssertEqual(snapshot.planMomentAdherencePercentage, 1.0 / 6.0 * 100, accuracy: 0.001)
     }
 
-    func testGoalAdherenceAndLateDayConcentrationUseRecordedVolume() async throws {
+    func testGoalAdherenceAndLateDayConcentrationUseFourteenDayRecordedVolume() async throws {
         let report = try await makeService(
             entries: representativeEntries()
         ).insights(asOf: now)
 
-        XCTAssertEqual(report.snapshot.goalAchievementPercentage, 40, accuracy: 0.001)
+        XCTAssertEqual(report.snapshot.goalAchievementPercentage, 2.0 / 14.0 * 100, accuracy: 0.001)
         XCTAssertEqual(report.snapshot.lateDayConsumptionPercentage, 40, accuracy: 0.001)
         XCTAssertEqual(report.snapshot.eveningConsumptionPercentage, 40, accuracy: 0.001)
-        XCTAssertEqual(report.snapshot.recentTrendPercentage, -25, accuracy: 0.001)
+        XCTAssertEqual(report.snapshot.recentTrendPercentage, 5_000.0 / 7.0 / 2_000.0 * 100, accuracy: 0.001)
     }
 
     func testFoundationModelsInsightsAreValidatedAndReturned() async throws {
@@ -89,6 +89,62 @@ final class HydrationInsightsServiceTests: XCTestCase {
         }
     }
 
+    func testValidGeneratedInsightsSurviveAnInvalidSibling() async throws {
+        let baseline = try await makeService(
+            entries: representativeEntries()
+        ).insights(asOf: now)
+        let valid = try XCTUnwrap(baseline.insights.first)
+        let invalid = HydrationInsight(
+            id: "invalid",
+            title: "Invented 99 day claim",
+            description: "Unsupported content",
+            evidence: "Not in the snapshot",
+            evidenceMetric: .goalAchievement,
+            suggestedAction: "Change the goal",
+            category: .goalProgress,
+            priority: .high
+        )
+        let generator = MockHydrationInsightsGenerator(result: .success([valid, invalid]))
+
+        let report = try await makeService(
+            entries: representativeEntries(),
+            generator: generator
+        ).insights(asOf: now)
+
+        XCTAssertEqual(report.insights, [valid])
+    }
+
+    func testValidatorAcceptsSnapshotNumbersAndRejectsInventedNumbers() async throws {
+        let baseline = try await makeService(
+            entries: representativeEntries()
+        ).insights(asOf: now)
+        let snapshot = baseline.snapshot
+        let supported = HydrationInsight(
+            id: "supported-number",
+            title: "Goal progress",
+            description: "Goal achievement is 14.3 percent across the analyzed window.",
+            evidence: snapshot.evidence(for: .goalAchievement),
+            evidenceMetric: .goalAchievement,
+            suggestedAction: "Keep logging consistently.",
+            category: .goalProgress,
+            priority: .medium
+        )
+        let invented = HydrationInsight(
+            id: "invented-number",
+            title: "Goal progress",
+            description: "Goal achievement is 99.9 percent across the analyzed window.",
+            evidence: snapshot.evidence(for: .goalAchievement),
+            evidenceMetric: .goalAchievement,
+            suggestedAction: "Keep logging consistently.",
+            category: .goalProgress,
+            priority: .medium
+        )
+        let validator = HydrationInsightsValidator()
+
+        XCTAssertTrue(validator.validate([supported], against: snapshot))
+        XCTAssertFalse(validator.validate([invented], against: snapshot))
+    }
+
     func testFoundationModelsUnavailabilityIsReportedWithoutFallback() async {
         let generator = MockHydrationInsightsGenerator(
             result: .failure(HydrationInsightsGenerationError.unavailable)
@@ -128,12 +184,23 @@ final class HydrationInsightsServiceTests: XCTestCase {
         }
     }
 
-    func testInsufficientHistoryDoesNotInvokeFoundationModelsAgent() async throws {
+    func testOneRecordedEntryProducesInsights() async throws {
+        let report = try await makeService(
+            entries: [entry(dayOffset: 0, hour: 10, amount: 500)]
+        ).insights(asOf: now)
+
+        XCTAssertTrue(report.snapshot.hasSufficientHistory)
+        XCTAssertEqual(report.snapshot.daysWithEntries, 1)
+        XCTAssertEqual(report.snapshot.totalEntryCount, 1)
+        XCTAssertEqual(report.insights.count, 3)
+    }
+
+    func testNoRecordedEntriesDoNotInvokeFoundationModelsAgent() async throws {
         let generator = MockHydrationInsightsGenerator(
             result: .failure(HydrationInsightsGenerationError.generationFailed)
         )
         let report = try await makeService(
-            entries: [entry(dayOffset: 0, hour: 10, amount: 500)],
+            entries: [],
             generator: generator
         ).insights(asOf: now)
 

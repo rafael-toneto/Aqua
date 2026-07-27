@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import OSLog
 
 @Generable(description: "A short set of hydration behavior insights based only on supplied aggregate metrics.")
 private struct FoundationGeneratedInsightsResponse {
@@ -12,26 +13,98 @@ private struct FoundationGeneratedInsightsResponse {
 
 @Generable(description: "One non-medical hydration behavior insight.")
 private struct FoundationGeneratedInsight {
-    @Guide(description: "One category value explicitly allowed by the prompt.")
-    var category: String
+    @Guide(description: "The category for this insight.")
+    var category: FoundationGeneratedInsightCategory
 
-    @Guide(description: "A short title without digits.")
+    @Guide(description: "A short title at most sixty characters.")
     var title: String
 
-    @Guide(description: "A concise explanation without digits or unsupported facts.")
+    @Guide(description: "A concise explanation using only facts from the supplied snapshot.")
     var description: String
 
-    @Guide(description: "One evidence metric key explicitly allowed by the prompt.")
-    var evidenceMetric: String
+    @Guide(description: "The aggregate metric that directly supports this insight.")
+    var evidenceMetric: FoundationGeneratedEvidenceMetric
 
-    @Guide(description: "A practical action without digits that preserves the saved daily goal.")
+    @Guide(description: "A practical action that preserves the saved daily goal.")
     var action: String
 
-    @Guide(description: "One priority value explicitly allowed by the prompt.")
-    var priority: String
+    @Guide(description: "The priority for this insight.")
+    var priority: FoundationGeneratedInsightPriority
+}
+
+@Generable(description: "A supported hydration insight category.")
+private enum FoundationGeneratedInsightCategory {
+    case consistency
+    case timing
+    case goalProgress
+    case planAdherence
+    case dayDistribution
+    case recentEvolution
+
+    var domainValue: HydrationInsightCategory {
+        switch self {
+        case .consistency: .consistency
+        case .timing: .timing
+        case .goalProgress: .goalProgress
+        case .planAdherence: .planAdherence
+        case .dayDistribution: .dayDistribution
+        case .recentEvolution: .recentEvolution
+        }
+    }
+}
+
+@Generable(description: "An aggregate metric calculated and validated by the app.")
+private enum FoundationGeneratedEvidenceMetric {
+    case goalAchievement
+    case averageDailyConsumption
+    case averageEntries
+    case firstEntryTime
+    case lastEntryTime
+    case dayDistribution
+    case averageInterval
+    case lateDayConcentration
+    case planAdherence
+    case daysWithoutEntries
+    case recentTrend
+
+    var domainValue: HydrationInsightEvidenceMetric {
+        switch self {
+        case .goalAchievement: .goalAchievement
+        case .averageDailyConsumption: .averageDailyConsumption
+        case .averageEntries: .averageEntries
+        case .firstEntryTime: .firstEntryTime
+        case .lastEntryTime: .lastEntryTime
+        case .dayDistribution: .dayDistribution
+        case .averageInterval: .averageInterval
+        case .lateDayConcentration: .lateDayConcentration
+        case .planAdherence: .planAdherence
+        case .daysWithoutEntries: .daysWithoutEntries
+        case .recentTrend: .recentTrend
+        }
+    }
+}
+
+@Generable(description: "The relative importance of an insight.")
+private enum FoundationGeneratedInsightPriority {
+    case low
+    case medium
+    case high
+
+    var domainValue: HydrationInsightPriority {
+        switch self {
+        case .low: .low
+        case .medium: .medium
+        case .high: .high
+        }
+    }
 }
 
 struct FoundationModelsInsightsGenerator: HydrationInsightsGenerating {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "Aqua",
+        category: "HydrationInsights"
+    )
+
     func generateInsights(
         from snapshot: HydrationInsightsSnapshot
     ) async throws -> [HydrationInsight] {
@@ -50,37 +123,57 @@ struct FoundationModelsInsightsGenerator: HydrationInsightsGenerating {
             any pattern healthy, unhealthy, optimal, or medically recommended.
             Produce three to five short, clear, non-repeating insights.
             Use only the allowed category, evidence metric, and priority values.
-            Put no digits in titles, descriptions, or actions. The app will attach the exact
-            validated numeric evidence identified by evidenceMetric.
-            If the facts are insufficient, do not infer a pattern.
+            If you mention a number, copy its exact value from the supplied snapshot. Never
+            calculate, round, estimate, or invent a number. The app will also attach the exact
+            validated evidence identified by evidenceMetric.
+            For a snapshot with only one recorded day, describe only observations from that day.
+            Never call a single-day observation a trend, history, habit, or recurring pattern.
             Return only the requested structured result.
             """)
 
-        let response = try await session.respond(
-            to: prompt(snapshot),
-            generating: FoundationGeneratedInsightsResponse.self,
-            options: GenerationOptions(sampling: .greedy, maximumResponseTokens: 1_400)
-        )
-
-        return try response.content.insights.map { generated in
-            guard let category = HydrationInsightCategory(rawValue: generated.category),
-                  let evidenceMetric = HydrationInsightEvidenceMetric(
-                      rawValue: generated.evidenceMetric
-                  ),
-                  let priority = HydrationInsightPriority(rawValue: generated.priority) else {
-                throw HydrationInsightsGenerationError.invalidResponse
-            }
-            return HydrationInsight(
-                id: "\(category.rawValue).\(evidenceMetric.rawValue)",
-                title: generated.title,
-                description: generated.description,
-                evidence: snapshot.evidence(for: evidenceMetric),
-                evidenceMetric: evidenceMetric,
-                suggestedAction: generated.action,
-                category: category,
-                priority: priority
+        do {
+            let response = try await session.respond(
+                to: prompt(snapshot),
+                generating: FoundationGeneratedInsightsResponse.self,
+                options: GenerationOptions(sampling: .greedy, maximumResponseTokens: 1_200)
             )
+
+            return response.content.insights.enumerated().map { index, generated in
+                let category = generated.category.domainValue
+                let evidenceMetric = generated.evidenceMetric.domainValue
+                let priority = generated.priority.domainValue
+
+                return HydrationInsight(
+                    id: "\(index).\(category.rawValue).\(evidenceMetric.rawValue)",
+                    title: normalized(generated.title, maximumLength: 60),
+                    description: normalized(generated.description, maximumLength: 260),
+                    evidence: snapshot.evidence(for: evidenceMetric),
+                    evidenceMetric: evidenceMetric,
+                    suggestedAction: normalized(generated.action, maximumLength: 180),
+                    category: category,
+                    priority: priority
+                )
+            }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as LanguageModelSession.GenerationError {
+            Self.logger.error(
+                "Foundation Models generation failed: \(String(describing: error), privacy: .public)"
+            )
+            throw HydrationInsightsGenerationError.generationFailed
+        } catch {
+            Self.logger.error(
+                "Unexpected Insights generation failure: \(String(describing: error), privacy: .public)"
+            )
+            throw HydrationInsightsGenerationError.generationFailed
         }
+    }
+
+    private func normalized(_ text: String, maximumLength: Int) -> String {
+        String(
+            text.trimmingCharacters(in: .whitespacesAndNewlines)
+                .prefix(maximumLength)
+        )
     }
 
     private func prompt(_ snapshot: HydrationInsightsSnapshot) -> String {

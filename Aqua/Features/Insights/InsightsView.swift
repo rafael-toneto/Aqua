@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct InsightsView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.waterVolumeUnit) private var waterVolumeUnit
     @StateObject private var viewModel: InsightsViewModel
@@ -20,20 +21,22 @@ struct InsightsView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                switch viewModel.state {
-                case .loading:
-                    loadingState
-                case .failed(let message):
-                    failedState(message)
-                case .empty(let report):
-                    emptyState(report)
-                case .loaded(let report):
-                    loadedContent(report)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    pageHeader
+                        .padding(.bottom, 20)
+
+                    stateContent
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, AquaSpacing.extraLarge)
+                .frame(maxWidth: 640, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
-            .navigationTitle("Insights")
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(palette.background.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
+            .refreshable { await viewModel.refresh() }
             .onAppear { isVisible = true }
             .onDisappear {
                 isVisible = false
@@ -58,162 +61,354 @@ struct InsightsView: View {
                 refreshAfterNotification()
             }
         }
+        .tint(palette.accent)
+    }
+
+    private var pageHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Your hydration")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(palette.secondary)
+
+            Text("Insights")
+                .font(.system(size: 25, weight: .bold))
+                .foregroundStyle(palette.primary)
+
+            Divider()
+                .overlay(palette.divider)
+                .padding(.top, 8)
+        }
+    }
+
+    @ViewBuilder
+    private var stateContent: some View {
+        switch viewModel.state {
+        case .loading:
+            loadingState
+        case .failed(let message):
+            failedState(message)
+        case .empty(let report):
+            emptyState(report)
+        case .loaded(let report):
+            loadedContent(report)
+        }
     }
 
     private var loadingState: some View {
-        VStack(spacing: AquaSpacing.medium) {
+        VStack(spacing: 14) {
             ProgressView()
                 .controlSize(.large)
+                .tint(palette.accent)
+
             Text("Analyzing your hydration history…")
-                .font(.headline)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(palette.primary)
+
             Text("Aqua’s on-device Insights agent is reviewing your saved hydration data.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(palette.secondary)
                 .multilineTextAlignment(.center)
         }
-        .padding(AquaSpacing.extraLarge)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+        .frame(maxWidth: .infinity, minHeight: 320)
+        .insightsCard(palette: palette, cornerRadius: 20)
     }
 
     private func failedState(_ message: String) -> some View {
-        ContentUnavailableView {
-            Label("Insights Unavailable", systemImage: "exclamationmark.triangle.fill")
-        } description: {
+        VStack(spacing: 14) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 27, weight: .light))
+                .foregroundStyle(palette.warning)
+                .frame(width: 54, height: 54)
+                .background(palette.warning.opacity(0.11), in: Circle())
+
+            Text("Insights Unavailable")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(palette.primary)
+
             Text(message)
-        } actions: {
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(palette.secondary)
+                .multilineTextAlignment(.center)
+
             Button("Try Again") {
                 viewModel.requestRefresh(displaysLoading: true)
             }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(palette.accent)
+            .padding(.horizontal, 20)
+            .frame(minHeight: 42)
+            .background(palette.accent.opacity(0.1), in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(palette.accent.opacity(0.3), lineWidth: 1)
+            }
+            .buttonStyle(.plain)
         }
+        .padding(24)
+        .frame(maxWidth: .infinity, minHeight: 320)
+        .insightsCard(palette: palette, cornerRadius: 20)
     }
 
     private func emptyState(_ report: HydrationInsightsReport) -> some View {
-        ScrollView {
-            ContentUnavailableView {
-                Label("Not Enough History Yet", systemImage: "sparkles")
-            } description: {
-                Text(
-                    "Add hydration entries on a few more days. Insights use a \(report.snapshot.analyzedDayCount)-day window and never invent missing patterns."
+        VStack(spacing: 14) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 27, weight: .medium))
+                .foregroundStyle(palette.accent)
+                .frame(width: 56, height: 56)
+                .background(
+                    LinearGradient(
+                        colors: [palette.accent.opacity(0.22), palette.accent.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    in: Circle()
                 )
-                Text("\(report.snapshot.daysWithEntries) recorded days are currently available.")
-            }
-            .padding(.top, AquaSpacing.extraLarge)
+                .overlay {
+                    Circle()
+                        .stroke(palette.accent.opacity(0.24), lineWidth: 1)
+                }
+
+            Text("Not Enough History Yet")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(palette.primary)
+
+            Text(
+                "Add at least one hydration entry. Insights use a \(report.snapshot.analyzedDayCount)-day window and never invent missing observations."
+            )
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(palette.secondary)
+                .multilineTextAlignment(.center)
+
+            Text("\(report.snapshot.daysWithEntries) recorded days are currently available.")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(palette.accent)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 6)
+                .background(palette.accent.opacity(0.1), in: Capsule())
         }
-        .refreshable { await viewModel.refresh() }
+        .padding(24)
+        .frame(maxWidth: .infinity, minHeight: 320)
+        .insightsCard(palette: palette, cornerRadius: 20)
     }
 
     private func loadedContent(_ report: HydrationInsightsReport) -> some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: AquaSpacing.large) {
-                VStack(alignment: .leading, spacing: AquaSpacing.extraSmall) {
-                    Text("Your Recent Pattern")
-                        .font(.title.bold())
-                    Text(
-                        "Insights created from the last \(report.snapshot.analyzedDayCount) days of data saved in Aqua."
-                    )
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
+        LazyVStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 10) {
+                sectionLabel("Recent Pattern")
                 summaryCard(report.snapshot)
-
-                agentCard
-
-                VStack(alignment: .leading, spacing: AquaSpacing.medium) {
-                    Text("Recommended next steps")
-                        .font(.headline)
-
-                    ForEach(report.insights) { insight in
-                        InsightCardView(insight: insight)
-                    }
-                }
-
-                Label {
-                    Text(
-                        "Insights use only your saved goal and hydration history. Processing stays on device and is not medical guidance."
-                    )
-                    .font(.footnote)
-                } icon: {
-                    Image(systemName: "lock.shield.fill")
-                }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, AquaSpacing.extraSmall)
             }
-            .padding(.horizontal, AquaSpacing.medium)
-            .padding(.bottom, AquaSpacing.extraLarge)
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline) {
+                    sectionLabel("Recommended Next Steps")
+
+                    Spacer(minLength: 12)
+
+                    Text(insightCountText(report.insights.count))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(palette.accent)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(palette.accent.opacity(0.1), in: Capsule())
+                }
+
+                ForEach(report.insights) { insight in
+                    InsightCardView(insight: insight)
+                }
+            }
+
+            HStack(alignment: .top, spacing: 9) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(palette.secondary)
+                    .accessibilityHidden(true)
+
+                Text(
+                    "Insights use only your saved goal and hydration history. Processing stays on device and is not medical guidance."
+                )
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(palette.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, AquaSpacing.extraSmall)
+            .padding(.top, 2)
+            .accessibilityElement(children: .combine)
         }
-        .refreshable { await viewModel.refresh() }
     }
 
     private func summaryCard(_ snapshot: HydrationInsightsSnapshot) -> some View {
-        AquaCard {
-            VStack(alignment: .leading, spacing: AquaSpacing.medium) {
-                Label(
-                    "\(snapshot.analyzedDayCount)-day summary",
-                    systemImage: "calendar.badge.clock"
-                )
-                    .font(.headline)
-                    .foregroundStyle(.blue)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 11) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(palette.accent)
+                    .frame(width: 36, height: 36)
+                    .background(palette.accent.opacity(0.11), in: Circle())
 
-                HStack(spacing: 0) {
-                    summaryMetric(
-                        title: "Days",
-                        value: "\(snapshot.analyzedDayCount)"
-                    )
-                    Divider().frame(height: 48)
-                    summaryMetric(
-                        title: "Goal days",
-                        value: "\(Int(snapshot.goalAchievementPercentage.rounded()))%"
-                    )
-                    Divider().frame(height: 48)
-                    summaryMetric(
-                        title: "Daily average",
-                        value: WaterAmountFormatter.string(
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Your recent pattern")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(palette.primary)
+
+                    Text("Created only from hydration saved in Aqua")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(palette.secondary)
+                }
+
+                Spacer(minLength: 8)
+
+                Text("\(snapshot.analyzedDayCount) DAYS")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(0.65)
+                    .foregroundStyle(palette.accent)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(palette.accent.opacity(0.1), in: Capsule())
+            }
+
+            HStack(alignment: .center, spacing: 18) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(
+                        WaterAmountFormatter.string(
                             from: snapshot.averageDailyConsumptionMilliliters,
                             unit: waterVolumeUnit
                         )
                     )
+                    .font(.system(size: 34, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(palette.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.68)
+                    .contentTransition(.numericText())
+
+                    Text("daily average")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(palette.secondary)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Divider()
+                goalDaysRing(snapshot)
+                    .frame(width: 102, height: 102)
+            }
 
-                Label(trendText(snapshot), systemImage: trendIcon(snapshot))
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(snapshot.recentTrendPercentage >= 0 ? .green : .orange)
+            HStack(spacing: 8) {
+                summaryMetric(
+                    title: "Recorded",
+                    value: "\(snapshot.daysWithEntries)/\(snapshot.analyzedDayCount)"
+                )
+                summaryMetric(
+                    title: "Entries",
+                    value: "\(snapshot.totalEntryCount)"
+                )
+                summaryMetric(
+                    title: "Daily goal",
+                    value: WaterAmountFormatter.string(
+                        from: snapshot.dailyGoalMilliliters,
+                        unit: waterVolumeUnit
+                    )
+                )
+            }
+
+            Divider()
+                .overlay(palette.divider)
+
+            HStack(alignment: .top, spacing: 9) {
+                Image(systemName: trendIcon(snapshot))
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(trendColor(snapshot))
+                    .frame(width: 26, height: 26)
+                    .background(trendColor(snapshot).opacity(0.11), in: Circle())
+
+                Text(trendText(snapshot))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(trendColor(snapshot))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 0)
             }
         }
+        .padding(16)
+        .insightsCard(palette: palette, cornerRadius: 20)
+        .accessibilityElement(children: .contain)
     }
 
-    private var agentCard: some View {
-        AquaCard {
-            Label {
-                VStack(alignment: .leading, spacing: AquaSpacing.extraSmall) {
-                    Text("Foundation Models Insights agent")
-                        .font(.headline)
-                    Text(
-                        "This is a dedicated on-device agent, separate from the one that creates your adaptive plan."
+    private func goalDaysRing(_ snapshot: HydrationInsightsSnapshot) -> some View {
+        let normalizedProgress = min(max(snapshot.goalAchievementPercentage / 100, 0), 1)
+
+        return ZStack {
+            Circle()
+                .stroke(palette.meterTrack, lineWidth: 9)
+
+            if normalizedProgress > 0 {
+                Circle()
+                    .trim(from: 0, to: normalizedProgress)
+                    .stroke(
+                        AngularGradient(
+                            colors: [
+                                palette.success.opacity(0.7),
+                                palette.success,
+                                palette.accent
+                            ],
+                            center: .center,
+                            startAngle: .degrees(-90),
+                            endAngle: .degrees(270)
+                        ),
+                        style: StrokeStyle(lineWidth: 9, lineCap: .round)
                     )
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                }
-            } icon: {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(.indigo)
+                    .rotationEffect(.degrees(-90))
+            }
+
+            VStack(spacing: 3) {
+                Image(systemName: normalizedProgress >= 1 ? "checkmark" : "target")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(normalizedProgress >= 1 ? palette.success : palette.accent)
+
+                Text("\(Int(snapshot.goalAchievementPercentage.rounded()))%")
+                    .font(.system(size: 18, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(palette.primary)
+
+                Text("goal days")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(palette.secondary)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Days reaching the hydration goal")
+        .accessibilityValue("\(Int(snapshot.goalAchievementPercentage.rounded())) percent")
     }
 
     private func summaryMetric(title: String, value: String) -> some View {
-        VStack(spacing: AquaSpacing.extraSmall) {
-            Text(value)
-                .font(.headline)
-                .minimumScaleFactor(0.75)
-                .lineLimit(1)
+        VStack(alignment: .leading, spacing: 5) {
             Text(title)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(palette.secondary)
+
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(palette.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(11)
+        .background(
+            palette.background.opacity(colorScheme == .dark ? 0.7 : 0.58),
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
+    }
+
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.system(size: 10, weight: .bold))
+            .tracking(1.25)
+            .foregroundStyle(palette.secondary)
+    }
+
+    private func insightCountText(_ count: Int) -> String {
+        count == 1 ? "1 insight" : "\(count) insights"
     }
 
     private func trendText(_ snapshot: HydrationInsightsSnapshot) -> String {
@@ -233,8 +428,81 @@ struct InsightsView: View {
         return "arrow.right"
     }
 
+    private func trendColor(_ snapshot: HydrationInsightsSnapshot) -> Color {
+        if snapshot.recentTrendPercentage > 0 { return palette.success }
+        if snapshot.recentTrendPercentage < 0 { return palette.warning }
+        return palette.secondary
+    }
+
+    private var palette: InsightsPalette {
+        InsightsPalette(colorScheme: colorScheme)
+    }
+
     private func refreshAfterNotification() {
         guard isVisible else { return }
         viewModel.requestRefresh(debounce: true)
+    }
+}
+
+struct InsightsPalette {
+    let background: Color
+    let controlBackground: Color
+    let meterTrack: Color
+    let primary: Color
+    let secondary: Color
+    let divider: Color
+    let accent: Color
+    let success: Color
+    let warning: Color
+
+    init(colorScheme: ColorScheme) {
+        if colorScheme == .dark {
+            background = Color(red: 0.025, green: 0.075, blue: 0.12)
+            controlBackground = Color(red: 0.035, green: 0.12, blue: 0.18)
+            meterTrack = Color(red: 0.045, green: 0.12, blue: 0.20)
+            primary = Color(red: 0.81, green: 0.91, blue: 0.96)
+            secondary = Color(red: 0.30, green: 0.55, blue: 0.68)
+            divider = Color(red: 0.10, green: 0.25, blue: 0.34)
+            accent = Color(red: 0.05, green: 0.78, blue: 0.94)
+            success = Color(red: 0.30, green: 0.82, blue: 0.58)
+            warning = Color(red: 0.96, green: 0.66, blue: 0.28)
+        } else {
+            background = Color(red: 0.95, green: 0.98, blue: 0.99)
+            controlBackground = Color.white.opacity(0.82)
+            meterTrack = Color(red: 0.86, green: 0.92, blue: 0.95)
+            primary = Color(red: 0.05, green: 0.16, blue: 0.22)
+            secondary = Color(red: 0.27, green: 0.47, blue: 0.57)
+            divider = Color(red: 0.76, green: 0.86, blue: 0.90)
+            accent = Color(red: 0.00, green: 0.56, blue: 0.76)
+            success = Color(red: 0.08, green: 0.58, blue: 0.36)
+            warning = Color(red: 0.76, green: 0.42, blue: 0.06)
+        }
+    }
+}
+
+private struct InsightsCardModifier: ViewModifier {
+    let palette: InsightsPalette
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                palette.controlBackground,
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(palette.divider.opacity(0.8), lineWidth: 1)
+            }
+    }
+}
+
+extension View {
+    func insightsCard(
+        palette: InsightsPalette,
+        cornerRadius: CGFloat
+    ) -> some View {
+        modifier(InsightsCardModifier(palette: palette, cornerRadius: cornerRadius))
     }
 }
