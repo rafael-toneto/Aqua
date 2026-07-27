@@ -149,7 +149,7 @@ struct TodayView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("of \(goalAmountText) today")
                         .font(.system(size: 15, weight: .regular))
-                        .foregroundStyle(palette.secondary)
+                        .foregroundStyle(palette.primary.opacity(0.67))
 
                     Text(remainingText)
                         .font(.system(size: 13, weight: .regular))

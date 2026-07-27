@@ -1,13 +1,18 @@
 import SwiftUI
 
 struct PlanPeriodListView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let periods: [PlanPeriodViewData]
     @State private var expandedPeriods: Set<HydrationDayPeriod> = []
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: AquaSpacing.medium) {
             Text("Today’s periods")
-                .font(.headline)
+                .font(.system(size: 10, weight: .bold))
+                .tracking(1.25)
+                .textCase(.uppercase)
+                .foregroundStyle(palette.secondary)
 
             ForEach(periods) { period in
                 PlanPeriodCard(
@@ -17,6 +22,10 @@ struct PlanPeriodListView: View {
                 )
             }
         }
+    }
+
+    private var palette: PlanPalette {
+        PlanPalette(colorScheme: colorScheme)
     }
 
     private func toggle(_ period: HydrationDayPeriod) {
@@ -31,6 +40,7 @@ struct PlanPeriodListView: View {
 }
 
 private struct PlanPeriodCard: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.waterVolumeUnit) private var waterVolumeUnit
 
     let data: PlanPeriodViewData
@@ -52,9 +62,10 @@ private struct PlanPeriodCard: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(title)
                                 .font(.headline)
+                                .foregroundStyle(palette.primary)
                             Text(timeRange)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(palette.secondary)
                         }
 
                         Spacer(minLength: AquaSpacing.small)
@@ -62,7 +73,7 @@ private struct PlanPeriodCard: View {
 
                         Image(systemName: "chevron.down")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(palette.secondary)
                             .rotationEffect(.degrees(isExpanded ? 180 : 0))
                             .accessibilityHidden(true)
                     }
@@ -71,21 +82,22 @@ private struct PlanPeriodCard: View {
                         HStack(alignment: .firstTextBaseline) {
                             Text("\(formatted(data.consumedMilliliters)) logged")
                                 .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(palette.primary)
                             Spacer()
                             Text("\(formatted(data.plannedMilliliters)) planned")
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(palette.secondary)
                         }
 
                         ProgressView(value: progressValue, total: progressTotal)
-                            .tint(data.isComplete ? .green : accentColor)
+                            .tint(data.isComplete ? palette.success : accentColor)
 
                         if data.consumedMilliliters > data.plannedMilliliters {
                             Text(
                                 "\(formatted(data.consumedMilliliters - data.plannedMilliliters)) above this period’s goal"
                             )
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(palette.secondary)
                         }
                     }
                 }
@@ -100,12 +112,13 @@ private struct PlanPeriodCard: View {
 
             if isExpanded {
                 Divider()
+                    .overlay(palette.divider)
                     .padding(.vertical, AquaSpacing.medium)
 
                 if data.checkpoints.isEmpty {
                     Label("No checkpoints are needed for this period", systemImage: "checkmark.circle")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, AquaSpacing.small)
                 } else {
@@ -116,7 +129,7 @@ private struct PlanPeriodCard: View {
         .padding(AquaSpacing.medium)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            Color(uiColor: .secondarySystemGroupedBackground),
+            palette.controlBackground,
             in: RoundedRectangle(cornerRadius: AquaCornerRadius.card)
         )
         .overlay {
@@ -178,23 +191,23 @@ private struct PlanPeriodCard: View {
 
     private var statusColor: Color {
         switch data.state {
-        case .completed: .green
-        case .missed: .orange
-        case .current: .yellow
-        case .upcoming: .blue
+        case .completed: palette.success
+        case .missed: palette.warning
+        case .current: palette.accent
+        case .upcoming: palette.secondary
         }
     }
 
     private var accentColor: Color {
-        switch data.period {
-        case .morning: .orange
-        case .afternoon: .yellow
-        case .evening: .indigo
-        }
+        palette.accent
     }
 
     private var borderColor: Color {
-        data.isComplete ? .green.opacity(0.45) : Color(uiColor: .separator).opacity(0.35)
+        data.isComplete ? palette.success.opacity(0.45) : palette.divider.opacity(0.8)
+    }
+
+    private var palette: PlanPalette {
+        PlanPalette(colorScheme: colorScheme)
     }
 
     private var progressValue: Double {
@@ -214,6 +227,7 @@ private struct PlanPeriodCard: View {
 }
 
 private struct PlanCheckpointTimeline: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.waterVolumeUnit) private var waterVolumeUnit
 
     let data: PlanPeriodViewData
@@ -225,15 +239,20 @@ private struct PlanCheckpointTimeline: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Checkpoints")
                         .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(palette.primary)
                     Spacer()
                     Text("\(data.completedCheckpointCount) of \(data.checkpoints.count) done")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(data.completedCheckpointCount == data.checkpoints.count ? .green : .secondary)
+                        .foregroundStyle(
+                            data.completedCheckpointCount == data.checkpoints.count
+                                ? palette.success
+                                : palette.secondary
+                        )
                 }
 
                 Text("Cumulative targets from today’s adaptive plan")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(palette.secondary)
             }
 
             VStack(alignment: .leading, spacing: 0) {
@@ -254,15 +273,17 @@ private struct PlanCheckpointTimeline: View {
                             HStack(alignment: .firstTextBaseline) {
                                 Text(checkpoint.scheduledDate.formatted(date: .omitted, time: .shortened))
                                     .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(palette.primary)
                                 Spacer()
                                 checkpointStatus(state: state)
                             }
 
                             Text(formatted(checkpoint.cumulativeMilliliters))
                                 .font(.system(.title3, design: .rounded, weight: .bold))
+                                .foregroundStyle(palette.primary)
                             Text("total by this time")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(palette.secondary)
                         }
                         .padding(.top, 2)
                         .padding(.bottom, index < data.checkpoints.count - 1 ? AquaSpacing.medium : 0)
@@ -310,11 +331,15 @@ private struct PlanCheckpointTimeline: View {
 
     private func checkpointStatusColor(for state: PlanCheckpointProgressState) -> Color {
         switch state {
-        case .completed: .green
-        case .missed: .red
+        case .completed: palette.success
+        case .missed: palette.danger
         case .next: accentColor
-        case .upcoming: .secondary
+        case .upcoming: palette.secondary
         }
+    }
+
+    private var palette: PlanPalette {
+        PlanPalette(colorScheme: colorScheme)
     }
 
     private func progressTowardCheckpoint(at index: Int) -> Double {
@@ -356,6 +381,8 @@ private struct PlanCheckpointTimeline: View {
 }
 
 private struct CheckpointProgressMarker: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let progress: Double
     let connectorProgress: Double
     let showsConnector: Bool
@@ -388,9 +415,9 @@ private struct CheckpointProgressMarker: View {
             if showsConnector {
                 ZStack(alignment: .top) {
                     Capsule()
-                        .fill(Color(uiColor: .separator).opacity(0.35))
+                        .fill(palette.divider.opacity(0.8))
                     Capsule()
-                        .fill(connectorProgress >= 1 ? Color.green : accentColor)
+                        .fill(connectorProgress >= 1 ? palette.success : accentColor)
                         .scaleEffect(y: connectorProgress, anchor: .top)
                 }
                 .frame(width: 3, height: 64)
@@ -401,18 +428,22 @@ private struct CheckpointProgressMarker: View {
 
     private var markerBackgroundColor: Color {
         switch state {
-        case .completed: .green
-        case .missed: .red.opacity(0.12)
-        case .next, .upcoming: Color(uiColor: .tertiarySystemFill)
+        case .completed: palette.success
+        case .missed: palette.danger.opacity(0.12)
+        case .next, .upcoming: palette.meterTrack
         }
     }
 
     private var markerForegroundColor: Color {
         switch state {
-        case .completed: .white
-        case .missed: .red
+        case .completed: palette.background
+        case .missed: palette.danger
         case .next, .upcoming: accentColor
         }
+    }
+
+    private var palette: PlanPalette {
+        PlanPalette(colorScheme: colorScheme)
     }
 
     private var markerIcon: String {
