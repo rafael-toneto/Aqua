@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AquaRootView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage(WaterVolumeUnit.preferenceKey) private var waterVolumeUnitRawValue = WaterVolumeUnit.metric.rawValue
 
     let trackingService: any HydrationTrackingServiceProtocol
@@ -57,7 +58,7 @@ struct AquaRootView: View {
                     Label("Settings", systemImage: "gearshape.fill")
                 }
         }
-        .tint(.blue)
+        .tint(AquaPalette(colorScheme: colorScheme).accent)
         .environment(\.waterVolumeUnit, waterVolumeUnit)
     }
 

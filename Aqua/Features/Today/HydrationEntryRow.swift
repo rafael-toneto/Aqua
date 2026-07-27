@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HydrationEntryRow: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.waterVolumeUnit) private var waterVolumeUnit
 
     let entry: HydrationEntry
@@ -9,9 +10,9 @@ struct HydrationEntryRow: View {
         HStack(spacing: AquaSpacing.medium) {
             Image(systemName: sourceIcon)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(.blue)
+                .foregroundStyle(palette.accent)
                 .frame(width: 38, height: 38)
-                .background(.blue.opacity(0.12), in: Circle())
+                .background(palette.accent.opacity(0.12), in: Circle())
 
             VStack(alignment: .leading, spacing: AquaSpacing.extraSmall) {
                 Text(
@@ -51,6 +52,10 @@ struct HydrationEntryRow: View {
         default:
             "Added water"
         }
+    }
+
+    private var palette: AquaPalette {
+        AquaPalette(colorScheme: colorScheme)
     }
 
     private var sourceIcon: String {

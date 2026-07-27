@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HydrationProgressView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.waterVolumeUnit) private var waterVolumeUnit
 
     let progress: DailyHydrationProgress
@@ -49,7 +50,7 @@ struct HydrationProgressView: View {
                 } icon: {
                     Image(systemName: progress.hasReachedGoal ? "checkmark.circle.fill" : "drop.fill")
                 }
-                .foregroundStyle(progress.hasReachedGoal ? .green : .blue)
+                .foregroundStyle(progress.hasReachedGoal ? palette.success : palette.accent)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -60,12 +61,15 @@ struct HydrationProgressView: View {
     private var progressRing: some View {
         ZStack {
             Circle()
-                .stroke(.secondary.opacity(0.14), lineWidth: 12)
+                .stroke(palette.meterTrack, lineWidth: 12)
 
             Circle()
                 .trim(from: 0, to: normalizedProgress)
                 .stroke(
-                    AngularGradient(colors: [.blue, .cyan, .blue], center: .center),
+                    AngularGradient(
+                        colors: [palette.accent.opacity(0.72), palette.accent, palette.accent.opacity(0.82)],
+                        center: .center
+                    ),
                     style: StrokeStyle(lineWidth: 12, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -88,6 +92,10 @@ struct HydrationProgressView: View {
             return "Daily goal reached"
         }
         return "\(WaterAmountFormatter.string(from: progress.remainingAmount, unit: waterVolumeUnit)) remaining"
+    }
+
+    private var palette: AquaPalette {
+        AquaPalette(colorScheme: colorScheme)
     }
 
     private var accessibilityValue: String {
