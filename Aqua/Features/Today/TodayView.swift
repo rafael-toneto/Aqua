@@ -193,12 +193,6 @@ struct TodayView: View {
                 )
                 .frame(height: proxy.size.height * normalizedProgress)
 
-                Rectangle()
-                    .fill(palette.divider)
-                    .frame(height: 1)
-                    .padding(.horizontal, 8)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .padding(.top, 48)
             }
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .animation(.smooth, value: normalizedProgress)
@@ -229,13 +223,6 @@ struct TodayView: View {
             ),
             in: Capsule()
         )
-        .overlay {
-            Capsule()
-                .stroke(
-                    (viewModel.progress.hasReachedGoal ? palette.success : palette.accent).opacity(0.42),
-                    lineWidth: 1
-                )
-        }
     }
 
     private var quickAddSection: some View {
