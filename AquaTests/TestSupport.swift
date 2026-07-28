@@ -141,7 +141,7 @@ struct ValidHydrationInsightsGenerator: HydrationInsightsGenerating {
             metric: HydrationInsightEvidenceMetric,
             title: String
         )] = [
-            (.consistency, .daysWithoutEntries, "Build a steady rhythm"),
+            (.consistency, .averageEntries, "Build a steady rhythm"),
             (.timing, .firstEntryTime, "Anchor the first entry"),
             (.goalProgress, .goalAchievement, "Keep goal progress visible")
         ]

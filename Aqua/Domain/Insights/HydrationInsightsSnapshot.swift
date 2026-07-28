@@ -24,17 +24,18 @@ struct HydrationInsightsSnapshot: Equatable, Sendable {
     let recentTrendPercentage: Double
 
     var hasSufficientHistory: Bool {
-        daysWithEntries >= 1 && totalEntryCount >= 1
+        daysWithEntries >= HydrationInsightsAvailability.requiredRecordedDayCount
+            && totalEntryCount >= HydrationInsightsAvailability.requiredRecordedDayCount
     }
 
     func evidence(for metric: HydrationInsightEvidenceMetric) -> String {
         switch metric {
         case .goalAchievement:
-            return "Goal reached on \(whole(goalAchievementPercentage))% of analyzed days"
+            return "Goal reached on \(whole(goalAchievementPercentage))% of recorded days"
         case .averageDailyConsumption:
-            return "Average of \(whole(averageDailyConsumptionMilliliters)) ml per day"
+            return "Average of \(whole(averageDailyConsumptionMilliliters)) ml per recorded day"
         case .averageEntries:
-            return "Average of \(decimal(averageEntriesPerDay)) entries per day"
+            return "Average of \(decimal(averageEntriesPerDay)) entries per recorded day"
         case .firstEntryTime:
             return "Average first entry at \(time(averageFirstEntryMinutes))"
         case .lastEntryTime:
@@ -48,7 +49,7 @@ struct HydrationInsightsSnapshot: Equatable, Sendable {
         case .planAdherence:
             return "\(whole(planMomentAdherencePercentage))% of entries linked to plan moments"
         case .daysWithoutEntries:
-            return "\(daysWithoutEntries) of \(analyzedDayCount) days had no entries"
+            return "\(daysWithoutEntries) of \(analyzedDayCount) recorded days had no entries"
         case .recentTrend:
             let direction = recentTrendPercentage >= 0 ? "higher" : "lower"
             return "Recent daily average is \(whole(abs(recentTrendPercentage)))% \(direction) relative to your goal"
@@ -57,14 +58,13 @@ struct HydrationInsightsSnapshot: Equatable, Sendable {
 
     var compactPrompt: String {
         """
-        analyzedDayCount=\(analyzedDayCount)
+        analyzedRecordedDayCount=\(analyzedDayCount)
         recordedDayCount=\(daysWithEntries)
-        daysWithoutEntries=\(daysWithoutEntries)
         totalEntries=\(totalEntryCount)
         savedDailyGoalMilliliters=\(whole(dailyGoalMilliliters))
-        percentOfDaysReachingGoal=\(decimal(goalAchievementPercentage))
-        averageDailyMillilitersIncludingNoEntryDays=\(decimal(averageDailyConsumptionMilliliters))
-        averageEntriesPerAnalyzedDay=\(decimal(averageEntriesPerDay))
+        percentOfRecordedDaysReachingGoal=\(decimal(goalAchievementPercentage))
+        averageDailyMillilitersAcrossRecordedDays=\(decimal(averageDailyConsumptionMilliliters))
+        averageEntriesPerRecordedDay=\(decimal(averageEntriesPerDay))
         averageFirstEntryMinuteOfDay=\(optionalDecimal(averageFirstEntryMinutes))
         averageLastEntryMinuteOfDay=\(optionalDecimal(averageLastEntryMinutes))
         percentOfRecordedVolumeInMorning=\(decimal(morningConsumptionPercentage))

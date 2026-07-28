@@ -89,9 +89,16 @@ final class InsightsViewModel: ObservableObject {
         do {
             let report = try await service.insights(asOf: dateProvider.now)
             guard activeRequestID == requestID, !Task.isCancelled else { return }
-            state = report.snapshot.hasSufficientHistory && !report.insights.isEmpty
-                ? .loaded(report)
-                : .empty(report)
+            switch report.availability {
+            case .available where !report.insights.isEmpty:
+                state = .loaded(report)
+            case .available:
+                state = .failed(
+                    message: HydrationInsightsGenerationError.invalidResponse.localizedDescription
+                )
+            case .needsMoreRecordedDays, .needsRecentRecordedDays:
+                state = .empty(report)
+            }
         } catch is CancellationError {
             return
         } catch {

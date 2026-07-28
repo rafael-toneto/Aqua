@@ -64,7 +64,6 @@ private enum FoundationGeneratedEvidenceMetric {
     case averageInterval
     case lateDayConcentration
     case planAdherence
-    case daysWithoutEntries
     case recentTrend
 
     var domainValue: HydrationInsightEvidenceMetric {
@@ -78,7 +77,6 @@ private enum FoundationGeneratedEvidenceMetric {
         case .averageInterval: .averageInterval
         case .lateDayConcentration: .lateDayConcentration
         case .planAdherence: .planAdherence
-        case .daysWithoutEntries: .daysWithoutEntries
         case .recentTrend: .recentTrend
         }
     }
@@ -126,8 +124,10 @@ struct FoundationModelsInsightsGenerator: HydrationInsightsGenerating {
             If you mention a number, copy its exact value from the supplied snapshot. Never
             calculate, round, estimate, or invent a number. The app will also attach the exact
             validated evidence identified by evidenceMetric.
-            For a snapshot with only one recorded day, describe only observations from that day.
-            Never call a single-day observation a trend, history, habit, or recurring pattern.
+            Every analyzed day is a distinct day with at least one saved hydration entry. The
+            snapshot contains between five and fourteen of the user's most recent eligible
+            recorded days. Calendar days without entries are excluded from every daily metric.
+            Never infer or mention unrecorded days, gaps between recorded days, or missing data.
             Return only the requested structured result.
             """)
 
@@ -181,6 +181,7 @@ struct FoundationModelsInsightsGenerator: HydrationInsightsGenerating {
             .map(\.rawValue)
             .joined(separator: ", ")
         let evidenceMetrics = HydrationInsightEvidenceMetric.allCases
+            .filter { $0 != .daysWithoutEntries }
             .map(\.rawValue)
             .joined(separator: ", ")
         let priorities = HydrationInsightPriority.allCases
@@ -189,7 +190,8 @@ struct FoundationModelsInsightsGenerator: HydrationInsightsGenerating {
 
         return """
             Analyze this compact, validated snapshot. It contains the complete set of facts you
-            may use and no individual hydration entries:
+            may use and no individual hydration entries. Its \(snapshot.analyzedDayCount)
+            analyzed days are recorded days only, ordered from oldest to newest:
             \(snapshot.compactPrompt)
 
             Allowed categories: \(categories)
