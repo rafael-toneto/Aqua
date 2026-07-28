@@ -104,7 +104,7 @@ struct InsightsView: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(palette.primary)
 
-            Text("Aqua’s on-device Insights agent is reviewing your saved hydration data.")
+            Text("AquaFlow’s on-device Insights agent is reviewing your saved hydration data.")
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(palette.secondary)
                 .multilineTextAlignment(.center)
@@ -251,7 +251,7 @@ struct InsightsView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(palette.primary)
 
-                    Text("Created only from hydration saved in Aqua")
+                    Text("Created only from hydration saved in AquaFlow")
                         .font(.system(size: 11, weight: .regular))
                         .foregroundStyle(palette.secondary)
                 }

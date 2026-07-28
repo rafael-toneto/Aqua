@@ -226,7 +226,7 @@ struct PlanView: View {
                     }
             }
 
-            Text("Aqua organizes the goal you selected and does not provide medical advice.")
+            Text("AquaFlow organizes the goal you selected and does not provide medical advice.")
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(palette.secondary)
                 .padding(.horizontal, AquaSpacing.extraSmall)

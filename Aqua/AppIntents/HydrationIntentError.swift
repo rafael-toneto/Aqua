@@ -22,13 +22,13 @@ enum HydrationIntentError: Error, Equatable, LocalizedError, CustomLocalizedStri
         case .amountTooLarge:
             "That amount is too large for a single entry. Please try a smaller value."
         case .unsupportedUnit:
-            "Aqua supports water amounts in milliliters, liters, or fluid ounces."
+            "AquaFlow supports water amounts in milliliters, liters, or fluid ounces."
         case .saveFailed:
-            "Aqua could not save this water entry. Please try again."
+            "AquaFlow could not save this water entry. Please try again."
         case .progressFailed:
-            "Aqua could not retrieve today’s hydration progress."
+            "AquaFlow could not retrieve today’s hydration progress."
         case .dependencyInitializationFailed:
-            "Aqua could not access your hydration data. Please try again."
+            "AquaFlow could not access your hydration data. Please try again."
         }
     }
 

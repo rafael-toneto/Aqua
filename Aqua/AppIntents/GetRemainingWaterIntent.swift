@@ -2,7 +2,7 @@ import AppIntents
 
 struct GetRemainingWaterIntent: AppIntent {
     static let title: LocalizedStringResource = "Remaining Water"
-    static let description = IntentDescription("Checks how much water remains in today’s Aqua goal.")
+    static let description = IntentDescription("Checks how much water remains in today’s AquaFlow goal.")
     static let openAppWhenRun = false
     static let supportedModes: IntentModes = .background
 

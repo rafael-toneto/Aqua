@@ -1,0 +1,57 @@
+{
+  "fill" : "system-light",
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : true,
+          "image-name" : "upper-flow.png",
+          "name" : "upper-flow",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              307.2547424473229,
+              37.85607488837066
+            ]
+          }
+        },
+        {
+          "image-name" : "water-droplet.png",
+          "name" : "water-droplet",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -0.8148716406172551,
+              -77.6764408011919
+            ]
+          }
+        },
+        {
+          "image-name" : "main-flow3.png",
+          "name" : "main-flow3",
+          "position" : {
+            "scale" : 0.9,
+            "translation-in-points" : [
+              -29.076405884738904,
+              243.16000485093426
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

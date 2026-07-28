@@ -101,7 +101,7 @@ private enum FoundationGeneratedInsightPriority {
 
 struct FoundationModelsInsightsGenerator: HydrationInsightsGenerating {
     private static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "Aqua",
+        subsystem: Bundle.main.bundleIdentifier ?? "AquaFlow",
         category: "HydrationInsights"
     )
 

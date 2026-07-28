@@ -108,7 +108,7 @@ final class HydrationIntentHandler: HydrationIntentHandling {
             throw HydrationIntentError.amountTooLarge
         }
 
-        // Aqua stores whole milliliters for intent entries. Half values round away from zero.
+        // AquaFlow stores whole milliliters for intent entries. Half values round away from zero.
         let roundedAmount = convertedAmount.rounded(.toNearestOrAwayFromZero)
         guard roundedAmount >= 1 else {
             throw HydrationIntentError.amountTooSmall

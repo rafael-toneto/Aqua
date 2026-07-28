@@ -3,6 +3,7 @@ import SwiftUI
 struct AquaRootView: View {
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(WaterVolumeUnit.preferenceKey) private var waterVolumeUnitRawValue = WaterVolumeUnit.metric.rawValue
+    @AppStorage(OnboardingPreferences.completionKey) private var hasCompletedOnboarding = false
 
     let trackingService: any HydrationTrackingServiceProtocol
     let goalService: any HydrationGoalServiceProtocol
@@ -10,8 +11,28 @@ struct AquaRootView: View {
     let dateProvider: any DateProviding
     let adaptivePlanService: AdaptivePlanService
     let insightsService: any HydrationInsightsProviding
+    let planningPreferencesStore: any PlanningPreferencesStoring
 
     var body: some View {
+        Group {
+            if hasCompletedOnboarding {
+                mainTabView
+                    .transition(.opacity)
+            } else {
+                OnboardingView(
+                    goalService: goalService,
+                    planningPreferencesStore: planningPreferencesStore,
+                    volumeUnit: waterVolumeUnit,
+                    onComplete: completeOnboarding
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: hasCompletedOnboarding)
+        .environment(\.waterVolumeUnit, waterVolumeUnit)
+    }
+
+    private var mainTabView: some View {
         TabView {
             TodayView(
                 trackingService: trackingService,
@@ -59,10 +80,13 @@ struct AquaRootView: View {
                 }
         }
         .tint(AquaPalette(colorScheme: colorScheme).accent)
-        .environment(\.waterVolumeUnit, waterVolumeUnit)
     }
 
     private var waterVolumeUnit: WaterVolumeUnit {
         WaterVolumeUnit(rawValue: waterVolumeUnitRawValue) ?? .metric
+    }
+
+    private func completeOnboarding() {
+        hasCompletedOnboarding = true
     }
 }

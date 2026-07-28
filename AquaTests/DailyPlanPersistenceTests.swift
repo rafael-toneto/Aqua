@@ -48,6 +48,23 @@ final class DailyPlanPersistenceTests: XCTestCase {
         XCTAssertFalse(preferences.isValid)
     }
 
+    func testDailyCadenceIsPresentedAsCheckpointsPerActivePeriod() {
+        let preferences = PlanningPreferences.defaults
+
+        XCTAssertEqual(preferences.preferredMomentCount, 6)
+        XCTAssertEqual(preferences.preferredCheckpointsPerActivePeriod, 2)
+    }
+
+    func testCheckpointPreferenceTracksOnlyActivePeriods() {
+        var preferences = PlanningPreferences.defaults
+        preferences.activeDayStartMinutes = 12 * 60
+        preferences.activeDayEndMinutes = 18 * 60
+        preferences.setPreferredCheckpointsPerActivePeriod(3)
+
+        XCTAssertEqual(preferences.preferredCheckpointsPerActivePeriod, 3)
+        XCTAssertEqual(preferences.preferredMomentCount, 3)
+    }
+
     func testSwiftDataRepositoryKeepsOneActivePlanPerDayAndUpdatesRevision() throws {
         let container = try ModelContainer(
             for: SwiftDataHydrationEntry.self,
