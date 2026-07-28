@@ -151,8 +151,10 @@ struct InsightsView: View {
     }
 
     private func emptyState(_ report: HydrationInsightsReport) -> some View {
-        VStack(spacing: 14) {
-            Image(systemName: "sparkles")
+        let content = unavailableContent(for: report.availability)
+
+        return VStack(spacing: 14) {
+            Image(systemName: content.icon)
                 .font(.system(size: 27, weight: .medium))
                 .foregroundStyle(palette.accent)
                 .frame(width: 56, height: 56)
@@ -169,18 +171,16 @@ struct InsightsView: View {
                         .stroke(palette.accent.opacity(0.24), lineWidth: 1)
                 }
 
-            Text("Not Enough History Yet")
+            Text(content.title)
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(palette.primary)
 
-            Text(
-                "Add at least one hydration entry. Insights use a \(report.snapshot.analyzedDayCount)-day window and never invent missing observations."
-            )
+            Text(content.message)
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(palette.secondary)
                 .multilineTextAlignment(.center)
 
-            Text("\(report.snapshot.daysWithEntries) recorded days are currently available.")
+            Text(content.progress)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(palette.accent)
                 .padding(.horizontal, 11)
@@ -258,7 +258,7 @@ struct InsightsView: View {
 
                 Spacer(minLength: 8)
 
-                Text("\(snapshot.analyzedDayCount) DAYS")
+                Text("\(snapshot.analyzedDayCount) RECORDED")
                     .font(.system(size: 10, weight: .bold))
                     .tracking(0.65)
                     .foregroundStyle(palette.accent)
@@ -294,8 +294,8 @@ struct InsightsView: View {
 
             HStack(spacing: 8) {
                 summaryMetric(
-                    title: "Recorded",
-                    value: "\(snapshot.daysWithEntries)/\(snapshot.analyzedDayCount)"
+                    title: "Recorded days",
+                    value: "\(snapshot.daysWithEntries)"
                 )
                 summaryMetric(
                     title: "Entries",
@@ -409,6 +409,40 @@ struct InsightsView: View {
 
     private func insightCountText(_ count: Int) -> String {
         count == 1 ? "1 insight" : "\(count) insights"
+    }
+
+    private func unavailableContent(
+        for availability: HydrationInsightsAvailability
+    ) -> (icon: String, title: String, message: String, progress: String) {
+        let requiredCount = HydrationInsightsAvailability.requiredRecordedDayCount
+
+        switch availability {
+        case .needsMoreRecordedDays(let recordedDayCount):
+            return (
+                icon: "calendar.badge.plus",
+                title: "More History Needed",
+                message: "Record your hydration on at least \(requiredCount) different days to unlock Insights.",
+                progress: "\(recordedDayCount) of \(requiredCount) recorded days"
+            )
+        case .needsRecentRecordedDays(let recordedDayCount):
+            let remainingCount = max(requiredCount - recordedDayCount, 0)
+            let message = recordedDayCount == 0
+                ? "Insights are unavailable because there are no recent records. Record hydration on \(requiredCount) new days to unlock them again."
+                : "Keep recording your hydration. Insights will return after \(remainingCount) more \(remainingCount == 1 ? "day" : "days") with records."
+            return (
+                icon: "clock.badge.exclamationmark",
+                title: "Recent Records Needed",
+                message: message,
+                progress: "\(recordedDayCount) of \(requiredCount) recent recorded days"
+            )
+        case .available:
+            return (
+                icon: "sparkles",
+                title: "Insights Unavailable",
+                message: "Insights could not be created from the available records.",
+                progress: "Try refreshing the page"
+            )
+        }
     }
 
     private func trendText(_ snapshot: HydrationInsightsSnapshot) -> String {

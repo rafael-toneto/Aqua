@@ -14,6 +14,11 @@ protocol HydrationTrackingServiceProtocol {
         through endDate: Date,
         dailyGoal: Double
     ) async throws -> [HydrationDaySummary]
+    func recordedSummaries(
+        through endDate: Date,
+        limit: Int,
+        dailyGoal: Double
+    ) async throws -> [HydrationDaySummary]
     func addWater(
         amountInMilliliters: Double,
         date: Date,
@@ -93,6 +98,43 @@ final class HydrationTrackingService: HydrationTrackingServiceProtocol {
         }
 
         return summaries
+    }
+
+    func recordedSummaries(
+        through endDate: Date,
+        limit: Int,
+        dailyGoal: Double
+    ) async throws -> [HydrationDaySummary] {
+        guard limit > 0 else { return [] }
+
+        let lastDay = calendar.startOfDay(for: endDate)
+        guard let endExclusive = calendar.date(byAdding: .day, value: 1, to: lastDay) else {
+            return []
+        }
+
+        let entries = try await repository.entries(
+            from: .distantPast,
+            to: endExclusive
+        )
+        let entriesByDay = Dictionary(grouping: entries) { entry in
+            calendar.startOfDay(for: entry.date)
+        }
+        let recordedDays = entriesByDay.keys
+            .sorted()
+            .suffix(limit)
+
+        return recordedDays.map { day in
+            let dayEntries = entriesByDay[day, default: []]
+                .sorted { $0.date < $1.date }
+            return HydrationDaySummary(
+                date: day,
+                entries: dayEntries,
+                progress: DailyHydrationProgress.calculate(
+                    entries: dayEntries,
+                    dailyGoal: dailyGoal
+                )
+            )
+        }
     }
 
     func addWater(

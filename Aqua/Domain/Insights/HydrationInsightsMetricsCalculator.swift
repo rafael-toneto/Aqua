@@ -57,8 +57,8 @@ struct HydrationInsightsMetricsCalculator: Sendable {
         let linkedPlanEntryCount = allEntries.count {
             $0.planMomentID != nil || $0.source == .plan
         }
-        // Compare equally sized recent and previous periods. Seven-day halves are retained for
-        // the future fourteen-day window, while shorter testing windows remain meaningful.
+        // Compare equally sized recent and previous groups of recorded days. A maximum of
+        // seven days per group keeps the comparison meaningful in the fourteen-record window.
         let comparisonDayCount = min(7, dailyAmounts.count / 2)
         let recentAmounts = Array(dailyAmounts.suffix(comparisonDayCount))
         let previousAmounts = Array(dailyAmounts.prefix(comparisonDayCount))

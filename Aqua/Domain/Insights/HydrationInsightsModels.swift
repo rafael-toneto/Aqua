@@ -43,6 +43,15 @@ struct HydrationInsight: Identifiable, Equatable, Sendable {
 struct HydrationInsightsReport: Equatable, Sendable {
     let snapshot: HydrationInsightsSnapshot
     let insights: [HydrationInsight]
+    let availability: HydrationInsightsAvailability
+}
+
+enum HydrationInsightsAvailability: Equatable, Sendable {
+    case available
+    case needsMoreRecordedDays(recordedDayCount: Int)
+    case needsRecentRecordedDays(recordedDayCount: Int)
+
+    static let requiredRecordedDayCount = 5
 }
 
 enum HydrationInsightsGenerationError: LocalizedError, Equatable {

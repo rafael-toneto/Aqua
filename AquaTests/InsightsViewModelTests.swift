@@ -16,6 +16,8 @@ final class InsightsViewModelTests: XCTestCase {
 
     func testRefreshAfterNewEntryUpdatesLoadedSnapshot() async throws {
         let entries = [
+            entry(dayOffset: -4, amount: 500),
+            entry(dayOffset: -3, amount: 500),
             entry(dayOffset: -2, amount: 500),
             entry(dayOffset: -1, amount: 500),
             entry(dayOffset: 0, amount: 500)
@@ -28,7 +30,7 @@ final class InsightsViewModelTests: XCTestCase {
             dateProvider: FixedDateProvider(now: now)
         )
         await viewModel.refresh(displaysLoading: true)
-        XCTAssertEqual(viewModel.state.report?.snapshot.totalEntryCount, 3)
+        XCTAssertEqual(viewModel.state.report?.snapshot.totalEntryCount, 5)
 
         try await tracking.addWater(
             amountInMilliliters: 250,
@@ -37,7 +39,7 @@ final class InsightsViewModelTests: XCTestCase {
         )
         await viewModel.refresh()
 
-        XCTAssertEqual(viewModel.state.report?.snapshot.totalEntryCount, 4)
+        XCTAssertEqual(viewModel.state.report?.snapshot.totalEntryCount, 6)
     }
 
     func testNewRefreshCancelsPreviousGenerationAndLatestResultWins() async throws {
@@ -84,7 +86,10 @@ final class InsightsViewModelTests: XCTestCase {
     }
 
     func testInsufficientHistoryProducesEmptyState() async {
-        let emptyReport = report(totalEntries: 0, sufficientHistory: false)
+        let emptyReport = report(
+            totalEntries: 3,
+            availability: .needsMoreRecordedDays(recordedDayCount: 3)
+        )
         let service = SequencedInsightsService(responses: [
             .init(delay: nil, result: .success(emptyReport))
         ])
@@ -99,6 +104,31 @@ final class InsightsViewModelTests: XCTestCase {
             return XCTFail("Expected empty state")
         }
         XCTAssertFalse(report.snapshot.hasSufficientHistory)
+        XCTAssertTrue(report.insights.isEmpty)
+    }
+
+    func testInsufficientRecentHistoryProducesEmptyState() async {
+        let emptyReport = report(
+            totalEntries: 2,
+            availability: .needsRecentRecordedDays(recordedDayCount: 2)
+        )
+        let service = SequencedInsightsService(responses: [
+            .init(delay: nil, result: .success(emptyReport))
+        ])
+        let viewModel = InsightsViewModel(
+            service: service,
+            dateProvider: FixedDateProvider(now: now)
+        )
+
+        await viewModel.refresh(displaysLoading: true)
+
+        guard case .empty(let report) = viewModel.state else {
+            return XCTFail("Expected empty state")
+        }
+        XCTAssertEqual(
+            report.availability,
+            .needsRecentRecordedDays(recordedDayCount: 2)
+        )
         XCTAssertTrue(report.insights.isEmpty)
     }
 
@@ -133,14 +163,25 @@ final class InsightsViewModelTests: XCTestCase {
 
     private func report(
         totalEntries: Int,
-        sufficientHistory: Bool = true
+        availability: HydrationInsightsAvailability = .available
     ) -> HydrationInsightsReport {
+        let recordedDayCount: Int
+        switch availability {
+        case .available:
+            recordedDayCount = 5
+        case .needsMoreRecordedDays(let count), .needsRecentRecordedDays(let count):
+            recordedDayCount = count
+        }
         let snapshot = HydrationInsightsSnapshot(
-            periodStart: calendar.date(byAdding: .day, value: -13, to: now) ?? now,
+            periodStart: calendar.date(
+                byAdding: .day,
+                value: -(max(recordedDayCount, 1) - 1),
+                to: now
+            ) ?? now,
             periodEnd: now,
-            analyzedDayCount: 14,
-            daysWithEntries: sufficientHistory ? 3 : 0,
-            daysWithoutEntries: sufficientHistory ? 11 : 14,
+            analyzedDayCount: recordedDayCount,
+            daysWithEntries: recordedDayCount,
+            daysWithoutEntries: 0,
             totalEntryCount: totalEntries,
             dailyGoalMilliliters: 2_000,
             goalAchievementPercentage: 25,
@@ -156,10 +197,11 @@ final class InsightsViewModelTests: XCTestCase {
             planMomentAdherencePercentage: 10,
             recentTrendPercentage: 5
         )
-        guard sufficientHistory else {
+        guard availability == .available else {
             return HydrationInsightsReport(
                 snapshot: snapshot,
-                insights: []
+                insights: [],
+                availability: availability
             )
         }
         let metrics: [(
@@ -167,7 +209,7 @@ final class InsightsViewModelTests: XCTestCase {
             HydrationInsightEvidenceMetric,
             String
         )] = [
-            (.consistency, .daysWithoutEntries, "Build a steady rhythm"),
+            (.consistency, .averageEntries, "Build a steady rhythm"),
             (.timing, .firstEntryTime, "Anchor the first entry"),
             (.goalProgress, .goalAchievement, "Keep goal progress visible")
         ]
@@ -185,7 +227,8 @@ final class InsightsViewModelTests: XCTestCase {
         }
         return HydrationInsightsReport(
             snapshot: snapshot,
-            insights: insights
+            insights: insights,
+            availability: availability
         )
     }
 }
