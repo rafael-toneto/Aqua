@@ -5,6 +5,7 @@ struct PlanSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.waterVolumeUnit) private var waterVolumeUnit
     @State private var preferences: PlanningPreferences
+    @State private var preferredCheckpointsPerPeriod: Int
     @State private var errorMessage: String?
 
     private let initialPreferences: PlanningPreferences
@@ -18,6 +19,9 @@ struct PlanSettingsView: View {
         self.initialPreferences = initialPreferences
         self.save = save
         _preferences = State(initialValue: initialPreferences)
+        _preferredCheckpointsPerPeriod = State(
+            initialValue: initialPreferences.preferredCheckpointsPerActivePeriod
+        )
     }
 
     var body: some View {
@@ -107,21 +111,21 @@ struct PlanSettingsView: View {
         PlanSettingsSection(
             title: "Schedule",
             systemImage: "clock.fill",
-            footer: "These preferences shape how the daily goal is distributed across the three periods."
+            footer: "Checkpoint count is a flexible cadence for each active period. AquaFlow may adjust the exact schedule as your day changes."
         ) {
             stepperRow(
-                title: "Preferred daily moments",
-                value: "\(preferences.preferredMomentCount)",
+                title: "Checkpoints per period",
+                value: "\(preferredCheckpointsPerPeriod)",
                 systemImage: "list.number",
-                selection: $preferences.preferredMomentCount,
-                range: 1...12,
+                selection: $preferredCheckpointsPerPeriod,
+                range: 1...4,
                 step: 1
             )
 
             settingsDivider
 
             stepperRow(
-                title: "Minimum interval",
+                title: "Minimum checkpoint interval",
                 value: "\(preferences.minimumIntervalMinutes) min",
                 systemImage: "timer",
                 selection: $preferences.minimumIntervalMinutes,
@@ -142,6 +146,15 @@ struct PlanSettingsView: View {
                 range: 50...10_000,
                 step: 50
             )
+        }
+        .onChange(of: preferredCheckpointsPerPeriod) { _, newValue in
+            preferences.setPreferredCheckpointsPerActivePeriod(newValue)
+        }
+        .onChange(of: preferences.activeDayStartMinutes) { _, _ in
+            preferences.setPreferredCheckpointsPerActivePeriod(preferredCheckpointsPerPeriod)
+        }
+        .onChange(of: preferences.activeDayEndMinutes) { _, _ in
+            preferences.setPreferredCheckpointsPerActivePeriod(preferredCheckpointsPerPeriod)
         }
     }
 
@@ -217,7 +230,7 @@ struct PlanSettingsView: View {
                 .padding(.top, 1)
                 .accessibilityHidden(true)
 
-            Text("Aqua organizes the goal you selected and does not provide medical advice.")
+            Text("AquaFlow organizes the goal you selected and does not provide medical advice.")
                 .font(.system(size: 12, weight: .regular))
                 .foregroundStyle(palette.secondary)
         }

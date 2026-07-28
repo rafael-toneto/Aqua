@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Semantic colors shared by every Aqua screen.
+/// Semantic colors shared by every AquaFlow screen.
 ///
 /// Neutral colors carry the layout hierarchy while the brand blue is reserved
 /// for interactive controls, navigation selection, and hydration progress.

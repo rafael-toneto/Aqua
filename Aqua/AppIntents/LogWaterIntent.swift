@@ -3,7 +3,7 @@ import Foundation
 
 struct LogWaterIntent: AppIntent {
     static let title: LocalizedStringResource = "Log Water"
-    static let description = IntentDescription("Records an amount of water in Aqua.")
+    static let description = IntentDescription("Records an amount of water in AquaFlow.")
     static let openAppWhenRun = false
     static let supportedModes: IntentModes = .background
 

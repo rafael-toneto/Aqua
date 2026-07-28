@@ -6,7 +6,7 @@ final class HydrationInsightsService: HydrationInsightsProviding {
     static let analysisDayCount = 14
 
     private static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "Aqua",
+        subsystem: Bundle.main.bundleIdentifier ?? "AquaFlow",
         category: "HydrationInsights"
     )
 

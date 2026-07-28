@@ -191,7 +191,7 @@ final class HydrationIntentHandlerTests: XCTestCase {
             XCTAssertEqual(error as? HydrationIntentError, .saveFailed)
             XCTAssertEqual(
                 error.localizedDescription,
-                "Aqua could not save this water entry. Please try again."
+                "AquaFlow could not save this water entry. Please try again."
             )
         }
     }

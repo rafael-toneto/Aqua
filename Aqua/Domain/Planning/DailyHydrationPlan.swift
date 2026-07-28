@@ -117,6 +117,36 @@ struct PlanningPreferences: Codable, Sendable, Equatable {
             && (15...240).contains(minimumIntervalMinutes)
             && (1...10_000).contains(preferredAmountMilliliters)
     }
+
+    /// The planning engine stores a whole-day cadence for compatibility with
+    /// plans created by earlier versions. The UI presents that cadence in the
+    /// same language used by the Plan screen: checkpoints within each active
+    /// morning, afternoon, or evening period.
+    var preferredCheckpointsPerActivePeriod: Int {
+        let periodCount = activePeriodCount
+        guard periodCount > 0 else { return 1 }
+        return min(
+            max(Int((Double(preferredMomentCount) / Double(periodCount)).rounded()), 1),
+            Self.maximumCheckpointsPerPeriod
+        )
+    }
+
+    mutating func setPreferredCheckpointsPerActivePeriod(_ count: Int) {
+        let safeCount = min(max(count, 1), Self.maximumCheckpointsPerPeriod)
+        preferredMomentCount = min(safeCount * activePeriodCount, 12)
+    }
+
+    private static let maximumCheckpointsPerPeriod = 4
+
+    private var activePeriodCount: Int {
+        max(
+            HydrationDayPeriod.allCases.count { period in
+                max(period.startMinutesFromMidnight, activeDayStartMinutes)
+                    < min(period.endMinutesFromMidnight, activeDayEndMinutes)
+            },
+            1
+        )
+    }
 }
 
 struct DailyPlanContext: Sendable {

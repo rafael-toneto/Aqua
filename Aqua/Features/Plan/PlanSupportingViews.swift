@@ -57,7 +57,7 @@ struct PlanEmptyStateView: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(palette.primary)
 
-            Text("Aqua will update the plan when your schedule or planning preferences change.")
+            Text("AquaFlow will update the plan when your schedule or planning preferences change.")
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(palette.secondary)
                 .multilineTextAlignment(.center)

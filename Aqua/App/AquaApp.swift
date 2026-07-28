@@ -19,7 +19,8 @@ struct AquaApp: App {
                     quickAddAmountsService: dependencies.quickAddAmountsService,
                     dateProvider: dependencies.dateProvider,
                     adaptivePlanService: dependencies.adaptivePlanService,
-                    insightsService: dependencies.hydrationInsightsService
+                    insightsService: dependencies.hydrationInsightsService,
+                    planningPreferencesStore: dependencies.planningPreferencesStore
                 )
                 .modelContainer(dependencies.modelContainer)
 

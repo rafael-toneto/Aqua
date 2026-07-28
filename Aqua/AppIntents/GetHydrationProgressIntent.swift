@@ -2,7 +2,7 @@ import AppIntents
 
 struct GetHydrationProgressIntent: AppIntent {
     static let title: LocalizedStringResource = "Hydration Progress"
-    static let description = IntentDescription("Checks today’s hydration progress in Aqua.")
+    static let description = IntentDescription("Checks today’s hydration progress in AquaFlow.")
     static let openAppWhenRun = false
     static let supportedModes: IntentModes = .background
 
