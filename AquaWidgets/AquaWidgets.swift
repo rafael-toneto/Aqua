@@ -5,5 +5,6 @@ import WidgetKit
 struct AquaWidgets: WidgetBundle {
     var body: some Widget {
         AquaFlowHydrationWidget()
+        AquaFlowHydrationLiveActivity()
     }
 }

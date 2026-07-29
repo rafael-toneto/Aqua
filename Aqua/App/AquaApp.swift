@@ -22,7 +22,8 @@ struct AquaApp: App {
                     dateProvider: dependencies.dateProvider,
                     adaptivePlanService: dependencies.adaptivePlanService,
                     insightsService: dependencies.hydrationInsightsService,
-                    planningPreferencesStore: dependencies.planningPreferencesStore
+                    planningPreferencesStore: dependencies.planningPreferencesStore,
+                    liveActivityController: dependencies.hydrationLiveActivityManager
                 )
                 .modelContainer(dependencies.modelContainer)
 

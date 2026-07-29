@@ -9,11 +9,24 @@ enum AquaSharedStore {
         static let dailyGoalInMilliliters = "hydration.dailyGoalInMilliliters"
         static let quickAddAmountsInMilliliters = "hydration.quickAddAmountsInMilliliters"
         static let volumeDisplayUnit = "hydration.volumeDisplayUnit"
+        static let liveActivitiesEnabled = "hydration.liveActivitiesEnabled"
         fileprivate static let didMigrateLegacyPreferences = "shared.didMigrateLegacyPreferences"
     }
 
     static var userDefaults: UserDefaults {
         UserDefaults(suiteName: appGroupIdentifier) ?? .standard
+    }
+
+    static var liveActivitiesEnabled: Bool {
+        get {
+            guard userDefaults.object(forKey: PreferenceKey.liveActivitiesEnabled) != nil else {
+                return true
+            }
+            return userDefaults.bool(forKey: PreferenceKey.liveActivitiesEnabled)
+        }
+        set {
+            userDefaults.set(newValue, forKey: PreferenceKey.liveActivitiesEnabled)
+        }
     }
 
     static func makeModelContainer(isStoredInMemoryOnly: Bool = false) throws -> ModelContainer {
@@ -87,7 +100,8 @@ enum AquaSharedStore {
         let keys = [
             PreferenceKey.dailyGoalInMilliliters,
             PreferenceKey.quickAddAmountsInMilliliters,
-            PreferenceKey.volumeDisplayUnit
+            PreferenceKey.volumeDisplayUnit,
+            PreferenceKey.liveActivitiesEnabled
         ]
 
         for key in keys where userDefaults.object(forKey: key) == nil {

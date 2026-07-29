@@ -18,6 +18,7 @@ final class AppDependencies {
     let hydrationInsightsGenerator: any HydrationInsightsGenerating
     let hydrationInsightsService: HydrationInsightsService
     let planningPreferencesStore: any PlanningPreferencesStoring
+    let hydrationLiveActivityManager: any HydrationLiveActivityControlling
     private let dynamicPlanSynchronizer: DynamicPlanSynchronizer
 
     init(
@@ -56,6 +57,11 @@ final class AppDependencies {
             planService: adaptivePlanService,
             dateProvider: dateProvider
         )
+        let hydrationLiveActivityManager = HydrationLiveActivityManager(
+            trackingService: hydrationTrackingService,
+            goalService: hydrationGoalService,
+            dateProvider: dateProvider
+        )
         hydrationTrackingService.setEntriesChangeObserver(dynamicPlanSynchronizer)
 
         self.modelContainer = modelContainer
@@ -68,11 +74,13 @@ final class AppDependencies {
         self.adaptivePlanService = adaptivePlanService
         hydrationInsightsGenerator = insightsGenerator
         hydrationInsightsService = insightsService
+        self.hydrationLiveActivityManager = hydrationLiveActivityManager
         self.dynamicPlanSynchronizer = dynamicPlanSynchronizer
         hydrationIntentHandler = HydrationIntentHandler(
             trackingService: hydrationTrackingService,
             goalService: hydrationGoalService,
-            dateProvider: dateProvider
+            dateProvider: dateProvider,
+            liveActivityController: hydrationLiveActivityManager
         )
     }
 }

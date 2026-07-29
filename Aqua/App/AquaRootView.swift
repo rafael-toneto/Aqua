@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AquaRootView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(
         WaterVolumeUnit.preferenceKey,
         store: AquaSharedStore.userDefaults
@@ -15,6 +16,7 @@ struct AquaRootView: View {
     let adaptivePlanService: AdaptivePlanService
     let insightsService: any HydrationInsightsProviding
     let planningPreferencesStore: any PlanningPreferencesStoring
+    let liveActivityController: any HydrationLiveActivityControlling
 
     var body: some View {
         Group {
@@ -33,6 +35,26 @@ struct AquaRootView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: hasCompletedOnboarding)
         .environment(\.waterVolumeUnit, waterVolumeUnit)
+        .task(id: hasCompletedOnboarding) {
+            guard hasCompletedOnboarding else { return }
+            await liveActivityController.synchronize()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard hasCompletedOnboarding, phase == .active else { return }
+            Task { await liveActivityController.synchronize() }
+        }
+        .onChange(of: waterVolumeUnitRawValue) {
+            guard hasCompletedOnboarding else { return }
+            Task { await liveActivityController.synchronize() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .hydrationEntriesDidChange)) { _ in
+            guard hasCompletedOnboarding else { return }
+            Task { await liveActivityController.synchronize() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .hydrationGoalDidChange)) { _ in
+            guard hasCompletedOnboarding else { return }
+            Task { await liveActivityController.synchronize() }
+        }
     }
 
     private var mainTabView: some View {
@@ -76,7 +98,8 @@ struct AquaRootView: View {
 
             SettingsView(
                 goalService: goalService,
-                quickAddAmountsService: quickAddAmountsService
+                quickAddAmountsService: quickAddAmountsService,
+                liveActivityController: liveActivityController
             )
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")
