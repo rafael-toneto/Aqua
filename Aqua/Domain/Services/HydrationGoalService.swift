@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 @MainActor
 protocol HydrationGoalServiceProtocol: AnyObject {
@@ -24,6 +25,7 @@ final class HydrationGoalService: HydrationGoalServiceProtocol {
         }
 
         preferencesStore.dailyGoalInMilliliters = amountInMilliliters
+        WidgetCenter.shared.reloadTimelines(ofKind: AquaSharedStore.widgetKind)
         NotificationCenter.default.post(name: .hydrationGoalDidChange, object: nil)
     }
 }

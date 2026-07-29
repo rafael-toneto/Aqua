@@ -4,7 +4,7 @@ enum WaterVolumeUnit: String, CaseIterable, Identifiable {
     case metric
     case fluidOunces
 
-    static let preferenceKey = "hydration.volumeDisplayUnit"
+    static let preferenceKey = AquaSharedStore.PreferenceKey.volumeDisplayUnit
 
     var id: Self { self }
 

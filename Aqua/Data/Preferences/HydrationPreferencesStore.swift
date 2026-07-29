@@ -8,36 +8,40 @@ protocol HydrationPreferencesStoring: AnyObject {
 
 @MainActor
 final class HydrationPreferencesStore: HydrationPreferencesStoring {
-    private enum Key {
-        static let dailyGoalInMilliliters = "hydration.dailyGoalInMilliliters"
-        static let quickAddAmountsInMilliliters = "hydration.quickAddAmountsInMilliliters"
-    }
-
     private let userDefaults: UserDefaults
 
-    init(userDefaults: UserDefaults = .standard) {
-        self.userDefaults = userDefaults
+    init(userDefaults: UserDefaults? = nil) {
+        self.userDefaults = userDefaults ?? AquaSharedStore.userDefaults
     }
 
     var dailyGoalInMilliliters: Double {
         get {
-            guard userDefaults.object(forKey: Key.dailyGoalInMilliliters) != nil else {
+            guard userDefaults.object(
+                forKey: AquaSharedStore.PreferenceKey.dailyGoalInMilliliters
+            ) != nil else {
                 return HydrationDefaults.dailyGoalInMilliliters
             }
 
-            let storedGoal = userDefaults.double(forKey: Key.dailyGoalInMilliliters)
+            let storedGoal = userDefaults.double(
+                forKey: AquaSharedStore.PreferenceKey.dailyGoalInMilliliters
+            )
             return storedGoal.isFinite && storedGoal > 0
                 ? storedGoal
                 : HydrationDefaults.dailyGoalInMilliliters
         }
         set {
-            userDefaults.set(newValue, forKey: Key.dailyGoalInMilliliters)
+            userDefaults.set(
+                newValue,
+                forKey: AquaSharedStore.PreferenceKey.dailyGoalInMilliliters
+            )
         }
     }
 
     var quickAddAmountsInMilliliters: [Double] {
         get {
-            guard let storedValues = userDefaults.array(forKey: Key.quickAddAmountsInMilliliters) else {
+            guard let storedValues = userDefaults.array(
+                forKey: AquaSharedStore.PreferenceKey.quickAddAmountsInMilliliters
+            ) else {
                 return HydrationDefaults.quickAddAmountsInMilliliters
             }
 
@@ -50,7 +54,10 @@ final class HydrationPreferencesStore: HydrationPreferencesStoring {
             return amounts
         }
         set {
-            userDefaults.set(newValue, forKey: Key.quickAddAmountsInMilliliters)
+            userDefaults.set(
+                newValue,
+                forKey: AquaSharedStore.PreferenceKey.quickAddAmountsInMilliliters
+            )
         }
     }
 }
