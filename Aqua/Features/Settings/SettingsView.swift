@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 
 struct SettingsView: View {
@@ -39,6 +40,7 @@ struct SettingsView: View {
                     unitsSection
                     dailyGoalSection
                     quickAddSection
+                    shortcutsSection
                     aboutSection
                 }
                 .padding(.horizontal, 20)
@@ -184,6 +186,36 @@ struct SettingsView: View {
             }
             .padding(14)
             .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var shortcutsSection: some View {
+        SettingsSection(
+            title: "Shortcuts",
+            footer: "Use AquaFlow from Shortcuts or Siri without opening the app."
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    rowIcon("square.stack.3d.up.fill")
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Log water automatically")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(palette.primary)
+
+                        Text("Create automations or ask Siri to log an amount, check your progress, or see what remains.")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundStyle(palette.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                ShortcutsLink()
+                    .shortcutsLinkStyle(.automaticOutline)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityHint("Opens AquaFlow actions in the Shortcuts app")
+            }
+            .padding(14)
         }
     }
 

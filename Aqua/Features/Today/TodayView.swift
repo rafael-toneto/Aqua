@@ -626,6 +626,8 @@ struct TodayView: View {
             return "Custom amount"
         case .plan:
             return "Daily plan"
+        case .appIntent, .shortcut:
+            return "Shortcut"
         default:
             return "Added water"
         }
