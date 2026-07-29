@@ -1,10 +1,13 @@
-import AppIntents
 import ActivityKit
+import AppIntents
 import Foundation
 import SwiftData
 import WidgetKit
 
-struct LogQuickAddWaterIntent: AppIntent {
+/// This intent belongs to both the app and widget-extension targets. Conforming to
+/// `LiveActivityIntent` makes WidgetKit run it in the app process, where ActivityKit
+/// can access and update the app's active Live Activities.
+struct LogQuickAddWaterIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Quick Add Water"
     static let description = IntentDescription("Logs a configured quick-add amount in AquaFlow.")
     static let openAppWhenRun = false
@@ -28,25 +31,26 @@ struct LogQuickAddWaterIntent: AppIntent {
             throw LogQuickAddWaterError.invalidAmount
         }
 
+        let now = Date()
         let modelContainer = try AquaSharedStore.makeModelContainer()
         let modelContext = ModelContext(modelContainer)
         modelContext.insert(
             SwiftDataHydrationEntry(
                 id: UUID(),
                 amountInMilliliters: amountInMilliliters,
-                date: Date(),
+                date: now,
                 sourceRawValue: "widget"
             )
         )
         try modelContext.save()
 
-        await updateLiveActivity(using: modelContext)
+        await updateLiveActivity(using: modelContext, now: now)
         WidgetCenter.shared.reloadTimelines(ofKind: AquaSharedStore.widgetKind)
         return .result()
     }
 
     @MainActor
-    private func updateLiveActivity(using modelContext: ModelContext, now: Date = .now) async {
+    private func updateLiveActivity(using modelContext: ModelContext, now: Date) async {
         guard AquaSharedStore.liveActivitiesEnabled else { return }
 
         let calendar = Calendar.autoupdatingCurrent
