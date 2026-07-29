@@ -14,15 +14,18 @@ final class HydrationIntentHandler: HydrationIntentHandling {
     private let trackingService: any HydrationTrackingServiceProtocol
     private let goalService: any HydrationGoalServiceProtocol
     private let dateProvider: any DateProviding
+    private let liveActivityController: (any HydrationLiveActivityControlling)?
 
     init(
         trackingService: any HydrationTrackingServiceProtocol,
         goalService: any HydrationGoalServiceProtocol,
-        dateProvider: any DateProviding
+        dateProvider: any DateProviding,
+        liveActivityController: (any HydrationLiveActivityControlling)? = nil
     ) {
         self.trackingService = trackingService
         self.goalService = goalService
         self.dateProvider = dateProvider
+        self.liveActivityController = liveActivityController
     }
 
     func logWater(amount: Measurement<UnitVolume>) async throws -> String {
@@ -38,6 +41,8 @@ final class HydrationIntentHandler: HydrationIntentHandling {
         } catch {
             throw HydrationIntentError.saveFailed
         }
+
+        await liveActivityController?.synchronize()
 
         let progress = try await currentProgress(for: date)
         let addedAmount = WaterAmountFormatter.spokenString(from: amountInMilliliters)

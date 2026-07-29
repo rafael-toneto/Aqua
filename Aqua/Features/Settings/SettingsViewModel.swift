@@ -11,6 +11,8 @@ final class SettingsViewModel: ObservableObject {
     }
     @Published private(set) var savedQuickAddAmountsInMilliliters = HydrationDefaults.quickAddAmountsInMilliliters
     @Published private(set) var volumeDisplayUnit: WaterVolumeUnit
+    @Published private(set) var liveActivitiesEnabled: Bool
+    @Published private(set) var liveActivitiesAvailable: Bool
     @Published private(set) var feedbackTrigger = 0
     @Published var errorMessage: String?
     @Published var quickAddErrorMessage: String?
@@ -18,18 +20,24 @@ final class SettingsViewModel: ObservableObject {
     private let goalService: any HydrationGoalServiceProtocol
     private let quickAddAmountsService: any QuickAddAmountsServiceProtocol
     private let userDefaults: UserDefaults
+    private let liveActivityController: (any HydrationLiveActivityControlling)?
 
     init(
         goalService: any HydrationGoalServiceProtocol,
         quickAddAmountsService: any QuickAddAmountsServiceProtocol,
+        liveActivityController: (any HydrationLiveActivityControlling)? = nil,
         userDefaults: UserDefaults? = nil
     ) {
         self.goalService = goalService
         self.quickAddAmountsService = quickAddAmountsService
         let resolvedUserDefaults = userDefaults ?? AquaSharedStore.userDefaults
         self.userDefaults = resolvedUserDefaults
+        self.liveActivityController = liveActivityController
         volumeDisplayUnit = resolvedUserDefaults.string(forKey: WaterVolumeUnit.preferenceKey)
             .flatMap(WaterVolumeUnit.init(rawValue:)) ?? .metric
+        liveActivitiesEnabled = liveActivityController?.isEnabled
+            ?? Self.liveActivitiesEnabled(in: resolvedUserDefaults)
+        liveActivitiesAvailable = liveActivityController?.areActivitiesAvailable ?? true
         load()
     }
 
@@ -65,6 +73,9 @@ final class SettingsViewModel: ObservableObject {
         quickAddAmountTexts = quickAddAmounts.map(editorText(from:))
         errorMessage = nil
         quickAddErrorMessage = nil
+        liveActivitiesEnabled = liveActivityController?.isEnabled
+            ?? Self.liveActivitiesEnabled(in: userDefaults)
+        liveActivitiesAvailable = liveActivityController?.areActivitiesAvailable ?? true
     }
 
     func toggleVolumeDisplayUnit() {
@@ -77,6 +88,19 @@ final class SettingsViewModel: ObservableObject {
         errorMessage = nil
         quickAddErrorMessage = nil
         feedbackTrigger += 1
+
+        Task { await liveActivityController?.synchronize() }
+    }
+
+    func setLiveActivitiesEnabled(_ isEnabled: Bool) {
+        liveActivitiesEnabled = isEnabled
+        userDefaults.set(isEnabled, forKey: AquaSharedStore.PreferenceKey.liveActivitiesEnabled)
+        feedbackTrigger += 1
+
+        Task {
+            await liveActivityController?.setEnabled(isEnabled)
+            liveActivitiesAvailable = liveActivityController?.areActivitiesAvailable ?? true
+        }
     }
 
     func formattedAmount(from amountInMilliliters: Double) -> String {
@@ -142,5 +166,12 @@ final class SettingsViewModel: ObservableObject {
             fromDisplayedText: text,
             unit: volumeDisplayUnit
         )
+    }
+
+    private static func liveActivitiesEnabled(in userDefaults: UserDefaults) -> Bool {
+        guard userDefaults.object(forKey: AquaSharedStore.PreferenceKey.liveActivitiesEnabled) != nil else {
+            return true
+        }
+        return userDefaults.bool(forKey: AquaSharedStore.PreferenceKey.liveActivitiesEnabled)
     }
 }

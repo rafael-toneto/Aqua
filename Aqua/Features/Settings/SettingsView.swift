@@ -22,12 +22,14 @@ struct SettingsView: View {
 
     init(
         goalService: any HydrationGoalServiceProtocol,
-        quickAddAmountsService: any QuickAddAmountsServiceProtocol
+        quickAddAmountsService: any QuickAddAmountsServiceProtocol,
+        liveActivityController: any HydrationLiveActivityControlling
     ) {
         _viewModel = StateObject(
             wrappedValue: SettingsViewModel(
                 goalService: goalService,
-                quickAddAmountsService: quickAddAmountsService
+                quickAddAmountsService: quickAddAmountsService,
+                liveActivityController: liveActivityController
             )
         )
     }
@@ -40,6 +42,7 @@ struct SettingsView: View {
                     unitsSection
                     dailyGoalSection
                     quickAddSection
+                    liveActivitySection
                     shortcutsSection
                     aboutSection
                 }
@@ -186,6 +189,40 @@ struct SettingsView: View {
             }
             .padding(14)
             .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var liveActivitySection: some View {
+        SettingsSection(
+            title: "Live Activity",
+            footer: viewModel.liveActivitiesAvailable
+                ? "Shows today’s water progress on the Lock Screen and Dynamic Island."
+                : "Live Activities are currently disabled in iOS Settings for AquaFlow."
+        ) {
+            Toggle(
+                isOn: Binding(
+                    get: { viewModel.liveActivitiesEnabled },
+                    set: viewModel.setLiveActivitiesEnabled
+                )
+            ) {
+                HStack(spacing: 12) {
+                    rowIcon("drop.circle.fill")
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Daily progress")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(palette.primary)
+
+                        Text("Keep your hydration progress visible at a glance")
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(palette.secondary)
+                    }
+                }
+            }
+            .tint(palette.accent)
+            .padding(14)
+            .accessibilityLabel("Live Activity for daily hydration progress")
+            .accessibilityHint("Shows or hides hydration progress on the Lock Screen and Dynamic Island")
         }
     }
 

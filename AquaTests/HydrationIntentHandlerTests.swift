@@ -133,6 +133,20 @@ final class HydrationIntentHandlerTests: XCTestCase {
         XCTAssertEqual(repository.storedEntries.count, 1)
     }
 
+    func testSuccessfulLogSynchronizesLiveActivity() async throws {
+        let liveActivityController = HydrationLiveActivityControllerSpy()
+        let handler = makeHandler(
+            repository: FakeHydrationRepository(),
+            liveActivityController: liveActivityController
+        )
+
+        _ = try await handler.logWater(
+            amount: Measurement(value: 250, unit: UnitVolume.milliliters)
+        )
+
+        XCTAssertEqual(liveActivityController.synchronizeCallCount, 1)
+    }
+
     func testSiriCreatedEntryUsesAppIntentSource() async throws {
         let repository = FakeHydrationRepository()
         let handler = makeHandler(repository: repository)
@@ -257,7 +271,8 @@ final class HydrationIntentHandlerTests: XCTestCase {
 
     private func makeHandler(
         repository: any HydrationRepository,
-        dailyGoal: Double = 2_000
+        dailyGoal: Double = 2_000,
+        liveActivityController: (any HydrationLiveActivityControlling)? = nil
     ) -> HydrationIntentHandler {
         let preferences = InMemoryHydrationPreferencesStore(
             dailyGoalInMilliliters: dailyGoal
@@ -265,8 +280,24 @@ final class HydrationIntentHandlerTests: XCTestCase {
         return HydrationIntentHandler(
             trackingService: HydrationTrackingService(repository: repository, calendar: calendar),
             goalService: HydrationGoalService(preferencesStore: preferences),
-            dateProvider: FixedDateProvider(now: today)
+            dateProvider: FixedDateProvider(now: today),
+            liveActivityController: liveActivityController
         )
+    }
+}
+
+@MainActor
+private final class HydrationLiveActivityControllerSpy: HydrationLiveActivityControlling {
+    var isEnabled = true
+    var areActivitiesAvailable = true
+    private(set) var synchronizeCallCount = 0
+
+    func setEnabled(_ isEnabled: Bool) async {
+        self.isEnabled = isEnabled
+    }
+
+    func synchronize() async {
+        synchronizeCallCount += 1
     }
 }
 
