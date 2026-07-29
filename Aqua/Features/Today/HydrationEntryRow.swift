@@ -49,6 +49,8 @@ struct HydrationEntryRow: View {
             "Custom amount"
         case .plan:
             "Daily plan"
+        case .appIntent, .shortcut:
+            "Shortcut"
         default:
             "Added water"
         }
@@ -62,6 +64,7 @@ struct HydrationEntryRow: View {
         switch entry.source {
         case .quickAdd: "bolt.fill"
         case .plan: "clock.badge.checkmark"
+        case .appIntent, .shortcut: "square.stack.3d.up.fill"
         default: "drop.fill"
         }
     }

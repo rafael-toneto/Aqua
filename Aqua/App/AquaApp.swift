@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftData
 import SwiftUI
 
@@ -6,6 +7,7 @@ struct AquaApp: App {
     private let dependenciesResult: Result<AppDependencies, Error>
 
     init() {
+        AquaShortcutsProvider.updateAppShortcutParameters()
         dependenciesResult = AppDependencies.shared
     }
 

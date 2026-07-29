@@ -68,6 +68,17 @@ final class HydrationIntentHandlerTests: XCTestCase {
         XCTAssertEqual(repository.storedEntries.first?.amountInMilliliters, 300)
     }
 
+    func testShortcutRegressionStores273MillilitersAs273Milliliters() async throws {
+        let repository = FakeHydrationRepository()
+        let handler = makeHandler(repository: repository)
+
+        _ = try await handler.logWater(
+            amount: Measurement(value: 273, unit: UnitVolume.milliliters)
+        )
+
+        XCTAssertEqual(repository.storedEntries.first?.amountInMilliliters, 273)
+    }
+
     func testLitersAreConvertedToMilliliters() async throws {
         let repository = FakeHydrationRepository()
         let handler = makeHandler(repository: repository)
