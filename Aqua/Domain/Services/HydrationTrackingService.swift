@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 @MainActor
 protocol HydrationEntriesChangeObserving: AnyObject {
@@ -162,12 +163,14 @@ final class HydrationTrackingService: HydrationTrackingServiceProtocol {
             await entriesChangeObserver?.hydrationEntriesDidChange()
         }
         NotificationCenter.default.post(name: .hydrationEntriesDidChange, object: nil)
+        WidgetCenter.shared.reloadTimelines(ofKind: AquaSharedStore.widgetKind)
     }
 
     func deleteEntry(id: UUID) async throws {
         try await repository.deleteEntry(id: id)
         await entriesChangeObserver?.hydrationEntriesDidChange()
         NotificationCenter.default.post(name: .hydrationEntriesDidChange, object: nil)
+        WidgetCenter.shared.reloadTimelines(ofKind: AquaSharedStore.widgetKind)
     }
 
     func progress(for date: Date, dailyGoal: Double) async throws -> DailyHydrationProgress {

@@ -23,10 +23,12 @@ final class AppDependencies {
     init(
         isStoredInMemoryOnly: Bool = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     ) throws {
-        let configuration = ModelConfiguration(isStoredInMemoryOnly: isStoredInMemoryOnly)
-        let modelContainer = try ModelContainer(
-            for: SwiftDataHydrationEntry.self, SwiftDataDailyPlan.self,
-            configurations: configuration
+        if !isStoredInMemoryOnly {
+            AquaSharedStore.migrateLegacyPreferencesIfNeeded()
+            try AquaSharedStore.migrateLegacyModelStoreIfNeeded()
+        }
+        let modelContainer = try AquaSharedStore.makeModelContainer(
+            isStoredInMemoryOnly: isStoredInMemoryOnly
         )
         let repository = SwiftDataHydrationRepository(modelContext: modelContainer.mainContext)
         let planRepository = SwiftDataDailyPlanRepository(modelContext: modelContainer.mainContext)

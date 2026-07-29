@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import WidgetKit
 
 @MainActor
 final class SettingsViewModel: ObservableObject {
@@ -21,12 +22,13 @@ final class SettingsViewModel: ObservableObject {
     init(
         goalService: any HydrationGoalServiceProtocol,
         quickAddAmountsService: any QuickAddAmountsServiceProtocol,
-        userDefaults: UserDefaults = .standard
+        userDefaults: UserDefaults? = nil
     ) {
         self.goalService = goalService
         self.quickAddAmountsService = quickAddAmountsService
-        self.userDefaults = userDefaults
-        volumeDisplayUnit = userDefaults.string(forKey: WaterVolumeUnit.preferenceKey)
+        let resolvedUserDefaults = userDefaults ?? AquaSharedStore.userDefaults
+        self.userDefaults = resolvedUserDefaults
+        volumeDisplayUnit = resolvedUserDefaults.string(forKey: WaterVolumeUnit.preferenceKey)
             .flatMap(WaterVolumeUnit.init(rawValue:)) ?? .metric
         load()
     }
@@ -68,6 +70,7 @@ final class SettingsViewModel: ObservableObject {
     func toggleVolumeDisplayUnit() {
         volumeDisplayUnit = volumeDisplayUnit == .metric ? .fluidOunces : .metric
         userDefaults.set(volumeDisplayUnit.rawValue, forKey: WaterVolumeUnit.preferenceKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: AquaSharedStore.widgetKind)
 
         goalText = editorText(from: savedGoalInMilliliters)
         quickAddAmountTexts = savedQuickAddAmountsInMilliliters.map(editorText(from:))

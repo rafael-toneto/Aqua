@@ -2,7 +2,10 @@ import SwiftUI
 
 struct AquaRootView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @AppStorage(WaterVolumeUnit.preferenceKey) private var waterVolumeUnitRawValue = WaterVolumeUnit.metric.rawValue
+    @AppStorage(
+        WaterVolumeUnit.preferenceKey,
+        store: AquaSharedStore.userDefaults
+    ) private var waterVolumeUnitRawValue = WaterVolumeUnit.metric.rawValue
     @AppStorage(OnboardingPreferences.completionKey) private var hasCompletedOnboarding = false
 
     let trackingService: any HydrationTrackingServiceProtocol

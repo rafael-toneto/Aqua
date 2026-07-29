@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 @MainActor
 protocol QuickAddAmountsServiceProtocol: AnyObject {
@@ -25,5 +26,6 @@ final class QuickAddAmountsService: QuickAddAmountsServiceProtocol {
         }
 
         preferencesStore.quickAddAmountsInMilliliters = amountsInMilliliters
+        WidgetCenter.shared.reloadTimelines(ofKind: AquaSharedStore.widgetKind)
     }
 }
