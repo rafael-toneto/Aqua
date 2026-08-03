@@ -47,14 +47,23 @@ final class HydrationIntentHandlerTests: XCTestCase {
         }
     }
 
-    func testTechnicallyUnreasonableAmountIsRejected() {
+    func testAmountAboveThirtyLitersIsRejected() {
         XCTAssertThrowsError(
             try HydrationIntentHandler.convertToMilliliters(
-                Measurement(value: 10.001, unit: UnitVolume.liters)
+                Measurement(value: 30.001, unit: UnitVolume.liters)
             )
         ) { error in
             XCTAssertEqual(error as? HydrationIntentError, .amountTooLarge)
         }
+    }
+
+    func testThirtyLiterAmountIsAccepted() throws {
+        XCTAssertEqual(
+            try HydrationIntentHandler.convertToMilliliters(
+                Measurement(value: 30, unit: UnitVolume.liters)
+            ),
+            30_000
+        )
     }
 
     func testMillilitersAreStoredWithoutUnitConversion() async throws {

@@ -46,6 +46,55 @@ final class WaterVolumeUnitTests: XCTestCase {
         )
     }
 
+    func testAddWaterLimitIsAppliedAfterFluidOunceConversion() async {
+        let repository = FakeHydrationRepository()
+        let viewModel = AddWaterViewModel(
+            trackingService: HydrationTrackingService(repository: repository),
+            dateProvider: FixedDateProvider(now: Date()),
+            waterVolumeUnit: .fluidOunces
+        )
+
+        viewModel.amountText = "1014.4"
+        XCTAssertTrue(viewModel.canSave)
+
+        viewModel.amountText = "1014.5"
+        XCTAssertFalse(viewModel.canSave)
+        let didSave = await viewModel.save()
+
+        XCTAssertFalse(didSave)
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            HydrationError.amountExceedsSingleEntryLimit.localizedDescription
+        )
+        XCTAssertTrue(repository.storedEntries.isEmpty)
+    }
+
+    func testDailyGoalLimitIsAppliedAfterFluidOunceConversion() async throws {
+        let suiteName = "WaterVolumeUnitTests.\(UUID().uuidString)"
+        let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { userDefaults.removePersistentDomain(forName: suiteName) }
+        let preferencesStore = InMemoryHydrationPreferencesStore()
+        let viewModel = SettingsViewModel(
+            goalService: HydrationGoalService(preferencesStore: preferencesStore),
+            quickAddAmountsService: QuickAddAmountsService(preferencesStore: preferencesStore),
+            userDefaults: userDefaults
+        )
+        viewModel.toggleVolumeDisplayUnit()
+
+        viewModel.goalText = "1014.5"
+        viewModel.save()
+
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            HydrationError.dailyGoalExceedsLimit.localizedDescription
+        )
+        XCTAssertEqual(
+            preferencesStore.dailyGoalInMilliliters,
+            HydrationDefaults.dailyGoalInMilliliters,
+            accuracy: 0.001
+        )
+    }
+
     func testSettingsUnitPreferencePersists() async throws {
         let suiteName = "WaterVolumeUnitTests.\(UUID().uuidString)"
         let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))

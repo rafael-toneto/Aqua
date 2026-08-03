@@ -154,7 +154,7 @@ struct AddWaterSheet: View {
                     .fill(palette.accent)
                     .frame(width: 5, height: 5)
 
-                Text("Enter an amount greater than zero.")
+                Text("Enter an amount greater than zero and no more than \(maximumEntryDescription).")
                     .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(palette.secondary)
             }
@@ -216,6 +216,13 @@ struct AddWaterSheet: View {
             await onSaved()
             dismiss()
         }
+    }
+
+    private var maximumEntryDescription: String {
+        WaterAmountFormatter.string(
+            from: HydrationLimits.maximumSingleEntryInMilliliters,
+            unit: viewModel.waterVolumeUnit
+        )
     }
 
     private var palette: AddWaterPalette {

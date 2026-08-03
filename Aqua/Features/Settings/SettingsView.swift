@@ -305,7 +305,8 @@ struct SettingsView: View {
                 initialValue: viewModel.editorText(from: viewModel.savedGoalInMilliliters),
                 unitSymbol: viewModel.volumeDisplayUnit.symbol,
                 systemImage: "target",
-                footer: "Enter an amount greater than zero.",
+                footer: "Enter an amount greater than zero and no more than "
+                    + "\(viewModel.maximumDailyGoalDescription).",
                 accessibilityLabel: "Daily water goal in \(viewModel.volumeDisplayUnit.accessibilityDescription)"
             ) { newValue in
                 viewModel.goalText = newValue
@@ -322,7 +323,8 @@ struct SettingsView: View {
                 ),
                 unitSymbol: viewModel.volumeDisplayUnit.symbol,
                 systemImage: "drop.fill",
-                footer: "Enter an amount greater than zero.",
+                footer: "Enter an amount greater than zero and no more than "
+                    + "\(viewModel.maximumSingleEntryDescription).",
                 accessibilityLabel: "Quick-add slot \(index + 1) in \(viewModel.volumeDisplayUnit.accessibilityDescription)"
             ) { newValue in
                 viewModel.saveQuickAddAmount(newValue, at: index)
@@ -423,13 +425,22 @@ private struct AmountEditorSheet: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    toolbarButton(
+                        systemImage: "xmark",
+                        accessibilityLabel: "Cancel",
+                        isEnabled: true
+                    ) {
+                        dismiss()
+                    }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .fontWeight(.semibold)
-                        .disabled(!canSave)
+                    toolbarButton(
+                        systemImage: "checkmark",
+                        accessibilityLabel: "Save",
+                        isEnabled: canSave,
+                        action: save
+                    )
                 }
             }
             .onAppear { isAmountFieldFocused = true }
@@ -537,6 +548,22 @@ private struct AmountEditorSheet: View {
                     .stroke(palette.danger.opacity(0.24), lineWidth: 1)
             }
             .accessibilityLabel("Error: \(message)")
+    }
+
+    private func toolbarButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .bold))
+                .frame(width: 36, height: 36)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private var parsedAmount: Double? {

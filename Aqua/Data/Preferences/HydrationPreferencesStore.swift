@@ -25,7 +25,9 @@ final class HydrationPreferencesStore: HydrationPreferencesStoring {
             let storedGoal = userDefaults.double(
                 forKey: AquaSharedStore.PreferenceKey.dailyGoalInMilliliters
             )
-            return storedGoal.isFinite && storedGoal > 0
+            return storedGoal.isFinite
+                && storedGoal > 0
+                && storedGoal <= HydrationLimits.maximumDailyGoalInMilliliters
                 ? storedGoal
                 : HydrationDefaults.dailyGoalInMilliliters
         }
@@ -47,7 +49,11 @@ final class HydrationPreferencesStore: HydrationPreferencesStoring {
 
             let amounts = storedValues.compactMap { ($0 as? NSNumber)?.doubleValue }
             guard amounts.count == HydrationDefaults.quickAddAmountsInMilliliters.count,
-                  amounts.allSatisfy({ $0.isFinite && $0 > 0 }) else {
+                  amounts.allSatisfy({
+                      $0.isFinite
+                          && $0 > 0
+                          && $0 <= HydrationLimits.maximumSingleEntryInMilliliters
+                  }) else {
                 return HydrationDefaults.quickAddAmountsInMilliliters
             }
 

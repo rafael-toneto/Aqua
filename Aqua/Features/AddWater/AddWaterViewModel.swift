@@ -30,12 +30,18 @@ final class AddWaterViewModel: ObservableObject {
     }
 
     var canSave: Bool {
-        amountInMilliliters != nil && !isSaving
+        guard let amountInMilliliters else { return false }
+        return amountInMilliliters <= HydrationLimits.maximumSingleEntryInMilliliters
+            && !isSaving
     }
 
     func save() async -> Bool {
         guard let amountInMilliliters else {
             errorMessage = HydrationError.invalidAmount.localizedDescription
+            return false
+        }
+        guard amountInMilliliters <= HydrationLimits.maximumSingleEntryInMilliliters else {
+            errorMessage = HydrationError.amountExceedsSingleEntryLimit.localizedDescription
             return false
         }
 

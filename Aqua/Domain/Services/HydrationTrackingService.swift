@@ -148,6 +148,9 @@ final class HydrationTrackingService: HydrationTrackingServiceProtocol {
         guard amountInMilliliters.isFinite, amountInMilliliters > 0 else {
             throw HydrationError.invalidAmount
         }
+        guard amountInMilliliters <= HydrationLimits.maximumSingleEntryInMilliliters else {
+            throw HydrationError.amountExceedsSingleEntryLimit
+        }
 
         let entry = HydrationEntry(
             amountInMilliliters: amountInMilliliters,

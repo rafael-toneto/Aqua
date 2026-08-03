@@ -20,7 +20,7 @@ enum HydrationIntentError: Error, Equatable, LocalizedError, CustomLocalizedStri
         case .amountTooSmall:
             "That amount is too small to record. Please try a larger value."
         case .amountTooLarge:
-            "That amount is too large for a single entry. Please try a smaller value."
+            "A single water entry cannot exceed 30 liters."
         case .unsupportedUnit:
             "AquaFlow supports water amounts in milliliters, liters, or fluid ounces."
         case .saveFailed:
