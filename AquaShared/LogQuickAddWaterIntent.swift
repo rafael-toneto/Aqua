@@ -73,26 +73,15 @@ struct LogQuickAddWaterIntent: LiveActivityIntent {
         let goal = storedGoal.isFinite && storedGoal > 0
             ? storedGoal
             : HydrationDefaults.dailyGoalInMilliliters
-        let state = HydrationActivityAttributes.ContentState(
+        await HydrationLiveActivityCoordinator.synchronize(
             consumedInMilliliters: consumed,
             goalInMilliliters: goal,
             usesFluidOunces: AquaSharedStore.userDefaults.string(
                 forKey: AquaSharedStore.PreferenceKey.volumeDisplayUnit
             ) == "fluidOunces",
-            updatedAt: now
+            now: now,
+            calendar: calendar
         )
-        let content = ActivityContent(
-            state: state,
-            staleDate: endOfDay,
-            relevanceScore: state.progress * 100
-        )
-
-        for activity in Activity<HydrationActivityAttributes>.activities where calendar.isDate(
-            activity.attributes.day,
-            inSameDayAs: day
-        ) {
-            await activity.update(content)
-        }
     }
 }
 
