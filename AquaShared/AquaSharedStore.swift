@@ -10,6 +10,7 @@ enum AquaSharedStore {
         static let quickAddAmountsInMilliliters = "hydration.quickAddAmountsInMilliliters"
         static let volumeDisplayUnit = "hydration.volumeDisplayUnit"
         static let liveActivitiesEnabled = "hydration.liveActivitiesEnabled"
+        static let liveActivitySuppressedDay = "hydration.liveActivitySuppressedDay"
         fileprivate static let didMigrateLegacyPreferences = "shared.didMigrateLegacyPreferences"
     }
 
@@ -27,6 +28,29 @@ enum AquaSharedStore {
         set {
             userDefaults.set(newValue, forKey: PreferenceKey.liveActivitiesEnabled)
         }
+    }
+
+    static func isLiveActivitySuppressed(
+        for date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Bool {
+        guard let suppressedDay = userDefaults.object(
+            forKey: PreferenceKey.liveActivitySuppressedDay
+        ) as? Date else {
+            return false
+        }
+
+        return calendar.isDate(suppressedDay, inSameDayAs: date)
+    }
+
+    static func suppressLiveActivity(
+        for date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) {
+        userDefaults.set(
+            calendar.startOfDay(for: date),
+            forKey: PreferenceKey.liveActivitySuppressedDay
+        )
     }
 
     static func makeModelContainer(isStoredInMemoryOnly: Bool = false) throws -> ModelContainer {
