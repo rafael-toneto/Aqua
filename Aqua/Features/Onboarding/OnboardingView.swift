@@ -475,7 +475,10 @@ struct OnboardingView: View {
 
                 Divider().overlay(palette.divider)
 
-                Text("Enter the amount using \(viewModel.volumeUnit.symbol).")
+                Text(
+                    "Enter the amount using \(viewModel.volumeUnit.symbol), up to "
+                        + "\(viewModel.maximumDailyGoalDescription)."
+                )
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(palette.secondary)
             }

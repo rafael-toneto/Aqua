@@ -13,6 +13,9 @@ final class SwiftDataHydrationRepository: HydrationRepository {
         guard entry.amountInMilliliters.isFinite, entry.amountInMilliliters > 0 else {
             throw HydrationError.invalidAmount
         }
+        guard entry.amountInMilliliters <= HydrationLimits.maximumSingleEntryInMilliliters else {
+            throw HydrationError.amountExceedsSingleEntryLimit
+        }
 
         modelContext.insert(SwiftDataHydrationEntry(entry: entry))
         try modelContext.save()

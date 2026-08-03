@@ -23,6 +23,9 @@ final class HydrationGoalService: HydrationGoalServiceProtocol {
         guard amountInMilliliters.isFinite, amountInMilliliters > 0 else {
             throw HydrationError.invalidDailyGoal
         }
+        guard amountInMilliliters <= HydrationLimits.maximumDailyGoalInMilliliters else {
+            throw HydrationError.dailyGoalExceedsLimit
+        }
 
         preferencesStore.dailyGoalInMilliliters = amountInMilliliters
         WidgetCenter.shared.reloadTimelines(ofKind: AquaSharedStore.widgetKind)

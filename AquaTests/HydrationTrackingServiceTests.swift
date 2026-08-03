@@ -71,6 +71,32 @@ final class HydrationTrackingServiceTests: XCTestCase {
         XCTAssertTrue(repository.storedEntries.isEmpty)
     }
 
+    func testSingleEntryAcceptsThirtyLitersAndRejectsAnythingHigher() async throws {
+        let day = try date(year: 2026, month: 7, day: 20, hour: 12)
+        let repository = FakeHydrationRepository()
+        let service = HydrationTrackingService(repository: repository, calendar: calendar)
+
+        try await service.addWater(
+            amountInMilliliters: HydrationLimits.maximumSingleEntryInMilliliters,
+            date: day,
+            source: .manual
+        )
+
+        do {
+            try await service.addWater(
+                amountInMilliliters: 30_000.001,
+                date: day,
+                source: .manual
+            )
+            XCTFail("Expected an entry above 30 L to be rejected")
+        } catch {
+            XCTAssertEqual(error as? HydrationError, .amountExceedsSingleEntryLimit)
+        }
+
+        XCTAssertEqual(repository.storedEntries.count, 1)
+        XCTAssertEqual(repository.storedEntries.first?.amountInMilliliters, 30_000)
+    }
+
     func testEntriesAreSeparatedByInjectedCalendarDay() async throws {
         let firstDay = try date(year: 2026, month: 7, day: 20, hour: 23)
         let secondDay = try date(year: 2026, month: 7, day: 21, hour: 1)

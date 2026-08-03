@@ -56,7 +56,9 @@ final class OnboardingViewModel: ObservableObject {
     var canContinue: Bool {
         switch step {
         case .goal:
-            proposedGoalInMilliliters != nil
+            proposedGoalInMilliliters.map {
+                $0 <= HydrationLimits.maximumDailyGoalInMilliliters
+            } ?? false
         case .plan:
             planningPreferences.isValid
         case .welcome, .overview:
@@ -65,6 +67,13 @@ final class OnboardingViewModel: ObservableObject {
     }
 
     var isLastStep: Bool { step == .plan }
+
+    var maximumDailyGoalDescription: String {
+        WaterAmountFormatter.string(
+            from: HydrationLimits.maximumDailyGoalInMilliliters,
+            unit: volumeUnit
+        )
+    }
 
     func move(to newStep: Step) {
         step = newStep

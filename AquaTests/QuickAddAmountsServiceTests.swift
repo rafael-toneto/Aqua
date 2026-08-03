@@ -41,4 +41,28 @@ final class QuickAddAmountsServiceTests: XCTestCase {
         }
         XCTAssertEqual(service.amountsInMilliliters, HydrationDefaults.quickAddAmountsInMilliliters)
     }
+
+    func testAmountAboveSingleEntryLimitIsRejectedWithoutChangingSavedValues() async {
+        let preferences = InMemoryHydrationPreferencesStore()
+        let service = QuickAddAmountsService(preferencesStore: preferences)
+
+        XCTAssertThrowsError(try service.updateAmounts([200, 30_000.001, 500])) { error in
+            XCTAssertEqual(error as? HydrationError, .quickAddAmountExceedsLimit)
+        }
+        XCTAssertEqual(service.amountsInMilliliters, HydrationDefaults.quickAddAmountsInMilliliters)
+    }
+
+    func testPreviouslyStoredQuickAddAboveLimitFallsBackToDefaults() async throws {
+        let suiteName = "QuickAddAmountsServiceTests.\(UUID().uuidString)"
+        let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { userDefaults.removePersistentDomain(forName: suiteName) }
+        let store = HydrationPreferencesStore(userDefaults: userDefaults)
+
+        store.quickAddAmountsInMilliliters = [200, 30_000.001, 500]
+
+        XCTAssertEqual(
+            store.quickAddAmountsInMilliliters,
+            HydrationDefaults.quickAddAmountsInMilliliters
+        )
+    }
 }

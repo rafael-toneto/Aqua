@@ -47,7 +47,8 @@ final class SettingsViewModel: ObservableObject {
 
     var canSave: Bool {
         guard let proposedGoalInMilliliters else { return false }
-        return proposedGoalInMilliliters != savedGoalInMilliliters
+        return proposedGoalInMilliliters <= HydrationLimits.maximumDailyGoalInMilliliters
+            && proposedGoalInMilliliters != savedGoalInMilliliters
     }
 
     var proposedQuickAddAmountsInMilliliters: [Double]? {
@@ -61,7 +62,9 @@ final class SettingsViewModel: ObservableObject {
 
     var canSaveQuickAddAmounts: Bool {
         guard let proposedQuickAddAmountsInMilliliters else { return false }
-        return proposedQuickAddAmountsInMilliliters != savedQuickAddAmountsInMilliliters
+        return proposedQuickAddAmountsInMilliliters.allSatisfy {
+            $0 <= HydrationLimits.maximumSingleEntryInMilliliters
+        } && proposedQuickAddAmountsInMilliliters != savedQuickAddAmountsInMilliliters
     }
 
     func load() {
@@ -109,6 +112,14 @@ final class SettingsViewModel: ObservableObject {
 
     func editorText(from amountInMilliliters: Double) -> String {
         WaterAmountFormatter.editorText(from: amountInMilliliters, unit: volumeDisplayUnit)
+    }
+
+    var maximumDailyGoalDescription: String {
+        formattedAmount(from: HydrationLimits.maximumDailyGoalInMilliliters)
+    }
+
+    var maximumSingleEntryDescription: String {
+        formattedAmount(from: HydrationLimits.maximumSingleEntryInMilliliters)
     }
 
     func save() {

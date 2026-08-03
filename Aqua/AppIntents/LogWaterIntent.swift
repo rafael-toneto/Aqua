@@ -40,7 +40,7 @@ struct LogWaterIntent: AppIntent {
         title: "Amount",
         description: "The numeric amount of water consumed.",
         controlStyle: .field,
-        inclusiveRange: (0.001, 10_000)
+        inclusiveRange: (0.001, 30_000)
     )
     var amount: Double?
 

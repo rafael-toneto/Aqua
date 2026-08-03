@@ -24,6 +24,11 @@ final class QuickAddAmountsService: QuickAddAmountsServiceProtocol {
               amountsInMilliliters.allSatisfy({ $0.isFinite && $0 > 0 }) else {
             throw HydrationError.invalidQuickAddAmounts
         }
+        guard amountsInMilliliters.allSatisfy({
+            $0 <= HydrationLimits.maximumSingleEntryInMilliliters
+        }) else {
+            throw HydrationError.quickAddAmountExceedsLimit
+        }
 
         preferencesStore.quickAddAmountsInMilliliters = amountsInMilliliters
         WidgetCenter.shared.reloadTimelines(ofKind: AquaSharedStore.widgetKind)

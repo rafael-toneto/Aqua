@@ -9,7 +9,7 @@ protocol HydrationIntentHandling {
 
 @MainActor
 final class HydrationIntentHandler: HydrationIntentHandling {
-    static let maximumSingleEntryInMilliliters = 10_000.0
+    static let maximumSingleEntryInMilliliters = HydrationLimits.maximumSingleEntryInMilliliters
 
     private let trackingService: any HydrationTrackingServiceProtocol
     private let goalService: any HydrationGoalServiceProtocol

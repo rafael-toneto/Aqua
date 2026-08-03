@@ -27,7 +27,7 @@ struct LogQuickAddWaterIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult {
         guard amountInMilliliters.isFinite,
               amountInMilliliters > 0,
-              amountInMilliliters <= 10_000 else {
+              amountInMilliliters <= HydrationLimits.maximumSingleEntryInMilliliters else {
             throw LogQuickAddWaterError.invalidAmount
         }
 
@@ -70,7 +70,9 @@ struct LogQuickAddWaterIntent: LiveActivityIntent {
         let storedGoal = AquaSharedStore.userDefaults.double(
             forKey: AquaSharedStore.PreferenceKey.dailyGoalInMilliliters
         )
-        let goal = storedGoal.isFinite && storedGoal > 0
+        let goal = storedGoal.isFinite
+            && storedGoal > 0
+            && storedGoal <= HydrationLimits.maximumDailyGoalInMilliliters
             ? storedGoal
             : HydrationDefaults.dailyGoalInMilliliters
         await HydrationLiveActivityCoordinator.synchronize(
