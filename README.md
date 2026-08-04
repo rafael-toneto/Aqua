@@ -2,8 +2,6 @@
 
 AquaFlow is a native iOS hydration tracker designed to make daily water intake simple, adaptive, and private. It combines quick logging, progress history, personalized hydration plans, on-device insights, widgets, Live Activities, and App Intents in a SwiftUI app.
 
-![AquaFlow Today screen](AppStore/Screenshots/iPhone-6.9/01-Today.png)
-
 ## Features
 
 - Quick water logging with configurable amounts
@@ -86,7 +84,6 @@ Aqua/
 AquaShared/          Models and storage shared with extensions
 AquaWidgets/         Widget and Live Activity extension
 AquaTests/           Unit and presentation tests
-AppStore/            App Store screenshots
 ```
 
 ## Privacy

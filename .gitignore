@@ -37,6 +37,12 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output/
 
+# Generated screenshots and demo media
+/AppStore/Screenshots/
+/DemoOutput/
+/Screenshots/
+/*-Demo-*.mp4
+
 # Signing credentials and local configuration
 *.mobileprovision
 *.cer
